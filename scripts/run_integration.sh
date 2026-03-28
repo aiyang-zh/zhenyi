@@ -19,12 +19,12 @@ go mod tidy
 
 echo ""
 echo ">>> 单测 + 集成测（含覆盖率）..."
-go test ./zdiscovery/... -tags=integration -count=1 -timeout=120s -short=false -v \
+go test ./zdiscovery/... -count=1 -timeout=120s -short=false -v \
   -coverprofile=zdiscovery.coverage.out -covermode=atomic "$@"
 
 echo ""
 echo ">>> 基测（Benchmark）..."
-go test ./zdiscovery/... -tags=integration -bench=. -benchmem -count=2 -run=^$ -timeout=60s 2>/dev/null || true
+go test ./zdiscovery/... -bench=. -benchmem -count=2 -run=^$ -timeout=60s 2>/dev/null || true
 
 # 覆盖率摘要
 COV_TOTAL=$(go tool cover -func=zdiscovery.coverage.out | grep '^total:' | awk '{print $3}')

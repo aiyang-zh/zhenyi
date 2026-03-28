@@ -1,10 +1,17 @@
 name: Docs Link Check
 
+# 仅在 Markdown 或链接检查脚本变更时运行（纯代码提交不跑）
 on:
   push:
     branches: ["main"]
+    paths:
+      - "**/*.md"
+      - "scripts/docs-check.py"
   pull_request:
     branches: ["main"]
+    paths:
+      - "**/*.md"
+      - "scripts/docs-check.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,32 +24,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Check relative links in docs
-        run: |
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-
-          root = Path(".")
-          files = [*root.glob("README*.md"), *root.glob("docs/*.md"), *root.glob("*/README*.md")]
-          pat = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
-
-          bad = []
-          for f in files:
-              txt = f.read_text(encoding="utf-8", errors="ignore")
-              for m in pat.finditer(txt):
-                  url = m.group(1).strip()
-                  if (not url) or url.startswith("#") or "://" in url or url.startswith("mailto:"):
-                      continue
-                  p = url.split("#", 1)[0].split("?", 1)[0].strip()
-                  if not p:
-                      continue
-                  if not (f.parent / p).resolve().exists():
-                      bad.append((str(f), url))
-
-          print("BROKEN:", len(bad))
-          for fp, url in bad:
-              print(fp, "->", url)
-          raise SystemExit(1 if bad else 0)
-          PY
-
+      - name: Check relative links (same as make docs-check)
+        run: python3 ./scripts/docs-check.py

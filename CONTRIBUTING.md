@@ -29,6 +29,8 @@
 - `make release-check`（最贴近 CI：docs-check + go test -count=1 + bug-check）
 - 或至少 `make test-unit`（快速）/ `make test`（含 `-race`，更严格）
 
+仅修改 `**/*.md`、`docs/**` 或根目录 `LICENSE` 时，GitHub 上的 **Run Tests** / **Bug Check** 不会触发。**Docs Link Check** 仅在变更 `**/*.md` 或 `scripts/docs-check.py` 时运行（与 `make docs-check` 同源）。若同一次提交包含代码与文档，仍会跑对应工作流。
+
 ```bash
 go test ./... -count=1
 go vet ./...

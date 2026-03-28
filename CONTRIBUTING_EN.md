@@ -29,6 +29,8 @@ To match CI behavior as closely as possible, prefer the repository `Makefile` ta
 - `make release-check` (closest to CI: docs-check + go test -count=1 + bug-check)
 - Or at least `make test-unit` (fast) / `make test` (includes `-race`, stricter)
 
+If a push/PR **only** changes `**/*.md`, `docs/**`, or the root `LICENSE`, GitHub **Run Tests** / **Bug Check** are skipped. **Docs Link Check** runs only when `**/*.md` or `scripts/docs-check.py` changes (same logic as `make docs-check`). Mixed changes trigger the matching workflows.
+
 ```bash
 go test ./... -count=1
 go vet ./...

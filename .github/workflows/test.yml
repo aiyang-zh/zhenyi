@@ -3,8 +3,16 @@ name: Run Tests
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,5 +35,6 @@ jobs:
         run: |
           test -z "$(gofmt -l .)"
 
+      # 无 etcd 的 runner：跳过 zdiscovery 的 etcd 集成测（与本地有 etcd 时仍可 go test ./... 跑通不同）
       - name: Run tests
-        run: go test ./... -race -count=3
+        run: go test ./... -race -count=3 -skip '^TestIntegration_'

@@ -12,7 +12,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-AGPL--3.0%20%2B%20Commercial-red.svg?style=flat-square)](COMMERCIAL_LICENSE_EN.md)
 
-**[Documentation index](docs/DOCS_INDEX_EN.md)** · [Xinchuang](docs/XINCHUANG_EN.md) · [Actions](https://github.com/aiyang-zh/zhenyi/actions) · [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base)
+**[中文](README.md)** · **[Documentation index](docs/DOCS_INDEX_EN.md)** · [Xinchuang](docs/XINCHUANG_EN.md) · [Actions](https://github.com/aiyang-zh/zhenyi/actions) · [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base)
 
 </div>
 

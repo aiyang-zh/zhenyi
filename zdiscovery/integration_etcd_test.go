@@ -30,10 +30,11 @@ func dialEtcd(tb testing.TB) *clientv3.Client {
 	tb.Helper()
 	var cli *clientv3.Client
 	var err error
-	for i := 0; i < 40; i++ {
+	// 短重试：无 etcd 时尽快 Skip，避免本地 go test 长时间阻塞；CI 对 TestIntegration_* 使用 -skip 不跑此路径。
+	for i := 0; i < 3; i++ {
 		cli, err = clientv3.New(clientv3.Config{
 			Endpoints:   etcdEndpoints(),
-			DialTimeout: 3 * time.Second,
+			DialTimeout: 2 * time.Second,
 		})
 		if err == nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -44,9 +45,9 @@ func dialEtcd(tb testing.TB) *clientv3.Client {
 			}
 			_ = cli.Close()
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
-	tb.Fatalf("etcd 不可用: %v", err)
+	tb.Skipf("etcd 不可用: %v", err)
 	return nil
 }
 
