@@ -1,0 +1,5 @@
+zhenyi im_single_demo — demo / test certificates
+================================================================================
+本目录 PEM 仅用于本地开发、示例联调与测试。禁止用于生产、公网或真实信任场景。
+These PEM files are for local dev, demos, and tests only. NOT for production use.
+================================================================================

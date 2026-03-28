@@ -1,0 +1,48 @@
+name: Question
+description: 使用咨询、设计讨论或行为确认
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这是使用咨询模板。若你要报告缺陷或提新功能，请改用 Bug / Feature 模板。
+        安全漏洞请勿公开提问，按 `SECURITY.md` 私下报告。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题描述
+      description: 你想确认什么行为或设计？
+      placeholder: 例如：某个 API 在并发场景下是否线程安全？
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 使用场景
+      description: 请描述你的业务上下文与目标
+      placeholder: 当前架构、调用方式、流量规模、性能约束等
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 已尝试方案（可选）
+      description: 你已经试过哪些方式？遇到了什么问题？
+
+  - type: input
+    id: version
+    attributes:
+      label: 相关版本/提交（可选）
+      placeholder: v0.1.0 / abcdef1
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已阅读 README / CONTRIBUTING，并搜索过现有 issue
+          required: true

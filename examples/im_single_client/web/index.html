@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>im_single_client — WebSocket</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; background: #111; color: #e8e8e8; }
+    body { max-width: 720px; margin: 1.5rem auto; padding: 0 12px; }
+    h1 { font-size: 1.1rem; font-weight: 600; color: #9cf; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+    input[type="text"], input[type="number"] { flex: 1; min-width: 100px; padding: 8px 10px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
+    button { padding: 8px 14px; border-radius: 6px; border: none; background: #2a6; color: #fff; cursor: pointer; }
+    button.secondary { background: #444; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #log {
+      height: 360px; overflow-y: auto; padding: 10px; border-radius: 8px;
+      background: #0d0d0d; border: 1px solid #2a2a2a; font-size: 14px; line-height: 1.45;
+    }
+    .msg { margin: 4px 0; word-break: break-word; }
+    .msg .u { color: #8bd; font-weight: 600; margin-right: 6px; }
+    .msg .sys { color: #888; font-style: italic; }
+    .err { color: #f66; }
+    .hint { color: #888; font-size: 13px; margin: 0 0 12px; }
+    code { background: #222; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>聊天室 Web 客户端（直连 Gate WebSocket）</h1>
+  <p class="hint">
+    服务端需使用 WebSocket 监听，例如：<code>go run ./examples/im_single_demo -conn ws -addr 127.0.0.1:8001</code>。
+    浏览器连接 <code>ws://&lt;网关地址&gt;/</code>，帧内协议与 TCP 客户端相同：12 字节大端头 + JSON body。
+  </p>
+  <div class="row">
+    <label>WS URL</label>
+    <input type="text" id="wsURL" placeholder="ws://127.0.0.1:8001/" style="min-width: 260px" value="ws://127.0.0.1:8001/" />
+  </div>
+  <div class="row">
+    <label>UserID</label>
+    <input type="number" id="userId" value="10001" />
+    <label>昵称</label>
+    <input type="text" id="nick" placeholder="昵称" maxlength="24" value="alice" />
+    <label>房间</label>
+    <input type="text" id="room" placeholder="lobby" maxlength="32" value="lobby" />
+  </div>
+  <div class="row">
+    <button type="button" id="btnConn">连接</button>
+    <button type="button" class="secondary" id="btnDisc" disabled>断开</button>
+  </div>
+  <div class="row">
+    <input type="text" id="line" placeholder="聊天… /join 房间 /leave /quit" maxlength="512" disabled />
+    <button type="button" id="btnSend" disabled>发送</button>
+  </div>
+  <div id="log"></div>
+
+  <script>
+    const MSG_LOGIN = 1;
+    const MSG_JOIN = 2;
+    const MSG_LEAVE = 3;
+    const MSG_SEND = 4;
+
+    let ws = null;
+    let seq = 0;
+    let currentRoom = "lobby";
+    let connected = false;
+
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+
+    /** zhenyi-base znet v0：msgId(4 BE) + seqId(4 BE) + dataLen(4 BE) + JSON body */
+    function packJson(msgId, obj) {
+      const body = new TextEncoder().encode(JSON.stringify(obj));
+      const buf = new ArrayBuffer(12 + body.length);
+      const dv = new DataView(buf);
+      dv.setInt32(0, msgId, false);
+      dv.setUint32(4, (++seq) >>> 0, false);
+      dv.setUint32(8, body.length, false);
+      new Uint8Array(buf, 12).set(body);
+      return buf;
+    }
+
+    function appendLine(html) {
+      const d = document.createElement("div");
+      d.className = "msg";
+      d.innerHTML = html;
+      logEl.appendChild(d);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function handleDown(msgId, payload) {
+      let o;
+      try {
+        o = JSON.parse(payload);
+      } catch {
+        appendLine(`<span class="err">非 JSON：${escapeHtml(payload.slice(0, 200))}</span>`);
+        return;
+      }
+      const t = o.type;
+      if (t === "login_ack") {
+        appendLine(`<span class="sys">登录成功 sessionId=${o.sessionId} userId=${o.userId}</span>`);
+        return;
+      }
+      if (t === "join_ack") {
+        appendLine(`<span class="sys">已进入房间 ${escapeHtml(o.room || "")}，昵称 ${escapeHtml(o.nickname || "")}</span>`);
+        return;
+      }
+      if (t === "leave_ack") {
+        appendLine(`<span class="sys">已离开房间</span>`);
+        return;
+      }
+      if (t === "room_notify") {
+        if (o.event === "join") {
+          appendLine(`<span class="sys">${escapeHtml(o.nickname || "?")} (#${o.sessionId}) 进入 ${escapeHtml(o.room || "")}</span>`);
+        } else if (o.event === "leave") {
+          appendLine(`<span class="sys">${escapeHtml(o.nickname || "?")} (#${o.sessionId}) 离开 ${escapeHtml(o.room || "")}</span>`);
+        }
+        return;
+      }
+      if (t === "chat_broadcast") {
+        appendLine(`<span class="u">${escapeHtml(o.nickname || "?")}</span>${escapeHtml(o.text || "")}`);
+        return;
+      }
+      appendLine(`<span class="sys">msgId=${msgId} ${escapeHtml(payload.slice(0, 240))}</span>`);
+    }
+
+    function parsePackets(u8) {
+      let off = 0;
+      while (off + 12 <= u8.length) {
+        const dv = new DataView(u8.buffer, u8.byteOffset + off, 12);
+        const msgId = dv.getInt32(0, false);
+        const len = dv.getUint32(8, false);
+        if (len > 1 << 20) break;
+        if (off + 12 + len > u8.length) break;
+        const payload = new TextDecoder().decode(u8.subarray(off + 12, off + 12 + len));
+        off += 12 + len;
+        handleDown(msgId, payload);
+      }
+      return off;
+    }
+
+    let rxBuf = new Uint8Array(0);
+    function mergeBuf(a, b) {
+      const o = new Uint8Array(a.length + b.length);
+      o.set(a, 0);
+      o.set(b, a.length);
+      return o;
+    }
+
+    function sendLoginJoin() {
+      const uid = Number($("userId").value) || 10001;
+      const nick = $("nick").value.trim() || "guest";
+      currentRoom = $("room").value.trim() || "lobby";
+      ws.send(packJson(MSG_LOGIN, { userId: uid, nickname: nick }));
+      ws.send(packJson(MSG_JOIN, { room: currentRoom, nickname: nick }));
+    }
+
+    $("btnConn").onclick = () => {
+      const nick = $("nick").value.trim();
+      if (!nick) {
+        alert("请填写昵称");
+        return;
+      }
+      let url = $("wsURL").value.trim();
+      if (!url) {
+        alert("请填写 WS URL");
+        return;
+      }
+      if (!/^wss?:\/\//i.test(url)) {
+        url = "ws://" + url.replace(/^\/\//, "");
+        $("wsURL").value = url;
+      }
+      ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
+      rxBuf = new Uint8Array(0);
+      connected = false;
+
+      ws.onopen = () => {
+        connected = true;
+        sendLoginJoin();
+        $("btnConn").disabled = true;
+        $("btnDisc").disabled = false;
+        $("line").disabled = false;
+        $("btnSend").disabled = false;
+        $("nick").disabled = true;
+        $("userId").disabled = true;
+        $("room").disabled = true;
+        $("wsURL").disabled = true;
+        appendLine(`<span class="sys">已连接 ${escapeHtml(url)}</span>`);
+      };
+      ws.onmessage = (ev) => {
+        if (typeof ev.data === "string") {
+          appendLine(`<span class="err">${escapeHtml(ev.data)}</span>`);
+          return;
+        }
+        const chunk = new Uint8Array(ev.data);
+        rxBuf = mergeBuf(rxBuf, chunk);
+        const used = parsePackets(rxBuf);
+        if (used > 0) rxBuf = rxBuf.subarray(used);
+      };
+      ws.onclose = () => {
+        connected = false;
+        $("btnConn").disabled = false;
+        $("btnDisc").disabled = true;
+        $("line").disabled = true;
+        $("btnSend").disabled = true;
+        $("nick").disabled = false;
+        $("userId").disabled = false;
+        $("room").disabled = false;
+        $("wsURL").disabled = false;
+        appendLine('<span class="sys">连接已关闭</span>');
+      };
+      ws.onerror = () => appendLine('<span class="err">WebSocket 错误</span>');
+    };
+
+    $("btnDisc").onclick = () => {
+      if (ws) ws.close();
+    };
+
+    function sendLine() {
+      if (!ws || ws.readyState !== 1 || !connected) return;
+      const nick = $("nick").value.trim() || "guest";
+      const line = $("line").value.trim();
+      if (!line) return;
+      if (line === "/quit") {
+        ws.close();
+        $("line").value = "";
+        return;
+      }
+      if (line === "/leave") {
+        ws.send(packJson(MSG_LEAVE, { room: currentRoom }));
+        $("line").value = "";
+        return;
+      }
+      if (line.startsWith("/join ")) {
+        const nr = line.slice(6).trim();
+        if (!nr) {
+          appendLine('<span class="err">用法：/join 房间名</span>');
+          return;
+        }
+        currentRoom = nr;
+        ws.send(packJson(MSG_JOIN, { room: currentRoom, nickname: nick }));
+        $("room").value = currentRoom;
+        $("line").value = "";
+        return;
+      }
+      ws.send(packJson(MSG_SEND, { room: currentRoom, text: line }));
+      $("line").value = "";
+    }
+
+    $("btnSend").onclick = sendLine;
+    $("line").onkeydown = (e) => {
+      if (e.key === "Enter") sendLine();
+    };
+  </script>
+</body>
+</html>

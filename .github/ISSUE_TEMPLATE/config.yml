@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage Discussion
+    url: https://github.com/aiyang-zh/zhenyi/discussions
+    about: 使用交流与开放讨论（如仓库已启用 Discussions）
+  - name: Security Report (Private)
+    url: mailto:1093993119@qq.com
+    about: 安全漏洞请勿公开提 issue，请按 SECURITY.md 私下邮件报告

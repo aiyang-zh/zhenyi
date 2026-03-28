@@ -1,0 +1,24 @@
+{
+  "bookname": "Go Actor 模型：实时应用架构与实战",
+  "description": "Go 实时服务端：网络、Actor、网关、分布式与可观测性；附 IM 示例与附录 API 速查",
+  "author": "aiyang-zh",
+  "language": "zh-hans",
+  "gitbook": ">=3.0.0",
+  "root": ".",
+  "structure": {
+    "readme": "README.md",
+    "summary": "SUMMARY.md"
+  },
+  "plugins": [
+    "expandable-chapters-small",
+    "anchor-navigation-ex",
+    "-lunr",
+    "-search",
+    "search-plus"
+  ],
+  "pluginsConfig": {
+    "anchor-navigation-ex": {
+      "showLevel": true
+    }
+  }
+}

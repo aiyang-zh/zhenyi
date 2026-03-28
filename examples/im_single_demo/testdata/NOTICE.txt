@@ -1,0 +1,5 @@
+zhenyi im_single_demo — demo / test TLS material
+================================================================================
+server.pem / server.key 仅用于示例与测试。禁止用于生产或线上。
+For examples and tests only. NOT for production.
+================================================================================

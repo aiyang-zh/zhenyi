@@ -1,0 +1,90 @@
+name: Bug Report
+description: 报告可复现的问题或回归
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请确认：
+        - 这不是安全漏洞（安全问题请按 `SECURITY.md` 私下邮件报告）
+        - 已阅读 `CONTRIBUTING.md`
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题概述
+      description: 简要说明问题现象与影响范围
+      placeholder: 在什么场景出现了什么问题？
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 提供最小可复现步骤（建议包含输入数据/配置）
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      placeholder: 你期望系统如何表现？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      placeholder: 实际输出、报错、panic、异常日志等
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志/堆栈（可选）
+      description: 请脱敏后粘贴关键日志
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: 受影响版本/提交
+      description: 例如 tag、commit SHA、分支名
+      placeholder: v0.1.0 / abcdef1
+    validations:
+      required: true
+
+  - type: input
+    id: go_version
+    attributes:
+      label: Go 版本
+      placeholder: go1.24.x
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: macOS 14 / Ubuntu 22.04 / Windows 11
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 issue，确认不是重复问题
+          required: true
+        - label: 我理解并同意按仓库当前许可与贡献条款提交内容
+          required: true
