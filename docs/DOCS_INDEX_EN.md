@@ -2,7 +2,7 @@
 
 This page provides quick navigation to `zhenyi`'s core documentation, organized by "Getting Started -> Architecture -> Capabilities -> Observability -> Operations".
 
-Much of this repository was developed with AI assistance (documentation and code), then reviewed and tested; **untested paths, bugs, or documentation drift may remain—no warranty is implied**. **Assess and validate before production use**. When in doubt, trust the source and tests here; issues and PRs welcome.
+The root [README.md](../README_EN.md) stays short; **this page is the full index** (sections and links below). For **documentation notes, CI, and licensing**, see the root README footer and [LICENSE](../LICENSE). If documentation disagrees with reproducible behavior, prefer the source and tests here; issues and PRs welcome.
 
 ## 1. Getting Started & Overview
 

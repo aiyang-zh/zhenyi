@@ -3,7 +3,7 @@ package zjs
 import (
 	"testing"
 
-	"github.com/aiyang-zh/zhenyi-base/zlo
+	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi/zscript"
 	"github.com/dop251/goja"
 )

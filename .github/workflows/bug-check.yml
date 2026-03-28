@@ -24,11 +24,14 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      # Pin: v0.5.x / tag 2024.1.1 cannot load Go 1.24 std export data ("unsupported version: 2").
+      # v0.7+ (@latest) currently requires Go 1.25+ to install. v0.6.x matches Go 1.24.
       - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.6.0
 
+      # Pin: newer gosec (e.g. @latest) may declare go >= 1.25 in module go.mod; go 1.24 cannot build that release. v2.22.x installs on Go 1.24.
       - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0
 
       - name: Add Go bin to PATH
         run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"

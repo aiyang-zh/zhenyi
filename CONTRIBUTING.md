@@ -51,6 +51,10 @@ make release-check
   - 本项目使用 `go.mod` 声明的 Go 版本；请确保本地 Go 与 CI 一致（见根 `README.md` 的 Go 版本徽章）。
 - **`make bug-check` 因工具缺失失败**
   - `bug-check` 会运行 `staticcheck`、`gosec`；本地缺失时可先安装，或使用 `make bug-check-strict` 与 CI 行为保持一致。
+- **`staticcheck` 报 `unsupported version: 2` / import 标准库失败**
+  - 多为本机 `staticcheck` 过旧（与 Go 1.24 不匹配）。请重装与 CI 一致版本：`go install honnef.co/go/tools/cmd/staticcheck@v0.6.0`
+- **`go install gosec@latest` 失败，提示 `requires go >= 1.25.0`（或类似）**
+  - 原因：某些新版本在其 **go.mod** 里声明了更高 Go 版本，当前环境的 Go 1.24 **无法编译/安装**该版本的可执行文件（不是「跑业务代码需要 1.25」）。与 CI 一致请固定版本：`go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0`
 - **脚本引擎/示例相关问题**
   - 单机示例（`im_single_demo`/`im_single_client`）不依赖 Etcd/NATS；多进程示例通常需要外部依赖可达（见 `docs/EXAMPLES.md`）。
 - **文档链接检查失败**

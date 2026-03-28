@@ -1,12 +1,12 @@
 package zlua
 
 import (
+	"github.com/yuin/gopher-lua"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/aiyang-zh/zhenyi/zscript"
-	
 )
 
 func TestGoToLua_CoversBranches(t *testing.T) {
