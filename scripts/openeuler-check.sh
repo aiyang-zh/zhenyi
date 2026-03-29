@@ -6,7 +6,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ZHENYI_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ZHENYI_BASE="${ZHENYI_BASE:-$ZHENYI_ROOT/../zhenyi-base}"
-GOLANG_IMAGE="${GOLANG_IMAGE:-openeuler/go:1.24.1-oe2403lts}"
+# Default: Docker Hub openeuler/go tag "1.25.0-oe2403sp1" (Go 1.25.0, oe 24.03 SP1, amd64+arm64). Newer: e.g. 1.25.4-oe2403sp2.
+GOLANG_IMAGE="${GOLANG_IMAGE:-openeuler/go:1.25.0-oe2403sp1}"
 # openEuler 镜像多为 amd64；Apple Silicon 上需 QEMU 或省略 --platform（由 Docker 处理）
 PLATFORM="${PLATFORM:-}"
 

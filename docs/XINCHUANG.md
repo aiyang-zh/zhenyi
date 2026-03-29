@@ -15,23 +15,11 @@
 - **多架构 / Linux 发行版构建**：不在仓库脚本里做 `GOOS/GOARCH` 交叉编译；请在 **目标信创机（或同架构 VM）** 上直接 `go test` / `go build`，或使用 **`make openeuler-check`** 在 openEuler 官方 Go 镜像内按 **容器所在架构** 做测试与编译。
 - **本机快速检查**：`make xinchuang-check` 为 `CGO_ENABLED=0 go test ./...` 与 **本机架构** 的 `go build ./...`（开发机为 macOS/Windows 时验证的是该 OS 下的可构建性，不等价于生产 Linux）。
 
-## 2. 已知阻塞点：Go 1.24.0 + bytedance/sonic（linux/amd64）
+## 2. 已知：bytedance/sonic 与部分环境（linux/amd64）
 
-当使用 **Go 1.24.0** 且 **启用 `-tags sonic`** 在 `linux/amd64` 构建时，可能出现链接错误：
+在 **启用 `-tags sonic`** 且目标为 **linux/amd64** 时，**sonic/loader** 与 Go runtime 的符号兼容性可能因工具链组合而异（例如链接阶段报错涉及 `sonic/loader` 与 `runtime`）。依赖关系在启用 sonic 时为：`examples/...` → `zhenyi-base/zserialize` → `bytedance/sonic` → `sonic/loader`。
 
-- `link: github.com/bytedance/sonic/loader: invalid reference to runtime.lastmoduledatap`
-
-依赖链路（当启用 `-tags sonic` 时）：
-
-- `examples/...` → `github.com/aiyang-zh/zhenyi-base/zserialize` → `github.com/bytedance/sonic` → `github.com/bytedance/sonic/loader`
-
-该问题属于 **sonic/loader 与 Go runtime 内部符号兼容性**，与业务逻辑无关。
-
-### 规避/修复建议（择一）
-
-- **推荐**：使用 **Go 1.24.1+**（Go 在 1.24.1 之后恢复了相关 linkname 兼容）。
-- **备选（不推荐）**：构建时使用 `-ldflags="-checklinkname=0"`（会放宽 linkname 检查，属于工具链层面的规避）。
-- **工程化方案（已落地）**：默认使用标准库 `encoding/json`；只有显式 `-tags sonic` 才启用 sonic，从而避免默认构建路径被 sonic 的平台/Go 版本兼容性影响。
+**建议**：Go 版本以根目录 **`go.mod`** 为准；在目标架构上执行 `go test` / `go build` 做实测。可选规避：构建时 `-ldflags="-checklinkname=0"`（不推荐，属工具链层面放宽）。仓库默认使用标准库 `encoding/json`，仅显式 `-tags sonic` 才走 sonic。
 
 ## 3. 国产 OS/中间件维度建议
 
@@ -61,7 +49,7 @@
 
 ### 4.1 openEuler 官方 Go 镜像（单测 + 示例编译）
 
-使用 **`openeuler/go:1.24.1-oe2403lts`**，在容器内执行 **`CGO_ENABLED=0 go test ./...`**，并对 **`go build ./...`** 以及 **`im_single_demo` / `im_single_client` / `im_multi_demo` / `im_multi_client_load` / `gencert`** 等示例路径做显式编译检查（不长期跑进程，仅验证可构建）。
+使用 **`GOLANG_IMAGE`** 指向的 openEuler Go 镜像（默认见 `scripts/openeuler-check.sh`，须满足根目录 **`go.mod`** 的 Go 版本），在容器内执行 **`CGO_ENABLED=0 go test ./...`**，并对 **`go build ./...`** 以及 **`im_single_demo` / `im_single_client` / `im_multi_demo` / `im_multi_client_load` / `gencert`** 等示例路径做显式编译检查（不长期跑进程，仅验证可构建）。
 
 ```bash
 make openeuler-check
@@ -73,7 +61,7 @@ make openeuler-check
 
 - 同样需要 **`../zhenyi-base`** 或 **`ZHENYI_BASE`**。
 - 可通过 **`GOLANG_IMAGE`** 覆盖镜像标签；若需指定平台（多为 **amd64** 镜像），可设 **`PLATFORM=linux/amd64`**。
-- 首次运行前可执行 **`docker pull openeuler/go:1.24.1-oe2403lts`**。
+- 首次运行前可 **`docker pull`** 所选 **`GOLANG_IMAGE`**。
 
 ## 5. 后续建议（更严格的信创验证）
 

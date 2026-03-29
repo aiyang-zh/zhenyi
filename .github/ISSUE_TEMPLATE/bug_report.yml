@@ -67,7 +67,7 @@ body:
     id: go_version
     attributes:
       label: Go 版本
-      placeholder: go1.24.x
+      placeholder: go1.25.x
     validations:
       required: true
 

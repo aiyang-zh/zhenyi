@@ -20,7 +20,7 @@
 
 ### 仓库洁净（提交前必查）
 
-公开仓库请勿包含：运行生成的 `logs/`、`*.log`、`.env`、真实密钥或仅本地使用的 PEM/配置；提交前执行 `git status`，确认无 IDE 垃圾文件误加入。详见 [SECURITY.md](SECURITY.md) 末尾「仓库洁净」。
+请勿提交：运行生成的 `logs/`、`*.log`、`.env`、真实密钥或仅本地使用的 PEM/配置；提交前执行 `git status`，确认无 IDE 垃圾文件误加入。详见 [SECURITY.md](SECURITY.md) 末尾「仓库洁净」。
 
 ### 本地检查（提交前）
 
@@ -49,22 +49,15 @@ make release-check
 
 ### 常见失败排查
 
-- **Go 版本不对**
-  - 本项目使用 `go.mod` 声明的 Go 版本；请确保本地 Go 与 CI 一致（见根 `README.md` 的 Go 版本徽章）。
-- **`make bug-check` 因工具缺失失败**
-  - `bug-check` 会运行 `staticcheck`、`gosec`；本地缺失时可先安装，或使用 `make bug-check-strict` 与 CI 行为保持一致。
-- **`staticcheck` 报 `unsupported version: 2` / import 标准库失败**
-  - 多为本机 `staticcheck` 过旧（与 Go 1.24 不匹配）。请重装与 CI 一致版本：`go install honnef.co/go/tools/cmd/staticcheck@v0.6.0`
-- **`go install gosec@latest` 失败，提示 `requires go >= 1.25.0`（或类似）**
-  - 原因：某些新版本在其 **go.mod** 里声明了更高 Go 版本，当前环境的 Go 1.24 **无法编译/安装**该版本的可执行文件（不是「跑业务代码需要 1.25」）。与 CI 一致请固定版本：`go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0`
-- **脚本引擎/示例相关问题**
-  - 单机示例（`im_single_demo`/`im_single_client`）不依赖 Etcd/NATS；多进程示例通常需要外部依赖可达（见 `docs/EXAMPLES.md`）。
-- **文档链接检查失败**
-  - 运行 `make docs-check` 查看断链列表，修复相对路径或调整文档位置。
+- **Go 版本与 CI 不一致**：以根目录 `go.mod` 与 `README.md` 徽章为准。
+- **`make bug-check` 缺工具**：`bug-check` 会跑 `staticcheck`、`gosec`；与 CI 一致可安装：`go install honnef.co/go/tools/cmd/staticcheck@v0.6.0`、`go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0`（须用与项目相同主版本的 Go 编译，确保 `$(go env GOPATH)/bin` 在 `PATH` 中）。
+- **`staticcheck` 报错**：用当前项目的 Go 重装上述 `staticcheck` 版本。
+- **脚本引擎/示例**：单机示例（`im_single_demo`/`im_single_client`）不依赖 Etcd/NATS；多进程示例见 `docs/EXAMPLES.md`。
+- **文档链接检查失败**：`make docs-check` 查看断链并修复。
 
 ## 贡献许可与 CLA
 
-为保障本项目的开源发布与双授权一致性，所有贡献者需要同意贡献许可条款：
+为保障许可与双授权一致性，所有贡献者需要同意贡献许可条款：
 
 - 请在首次贡献前阅读并同意 `CLA.md`。
 - 提交 PR 视为你确认你有权贡献该代码，并同意 `CLA.md` 中的条款。

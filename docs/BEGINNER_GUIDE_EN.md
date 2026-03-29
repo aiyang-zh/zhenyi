@@ -4,7 +4,7 @@ This document is for developers who are new to `zhenyi`, with the goal of gettin
 
 ## 1. Prerequisites
 
-- Go version: `1.24+`
+- Go version: follow root `go.mod` (see badge in `README.md`)
 - Git installed
 - Local available port (default `9001` in examples)
 

@@ -49,22 +49,15 @@ make release-check
 
 ## Common Failure Troubleshooting
 
-- **Wrong Go version**
-  - This project declares Go version in `go.mod`; ensure your local Go matches CI (see Go version badge in root `README.md`).
-- **`make bug-check` fails due to missing tools**
-  - `bug-check` runs `staticcheck`, `gosec`; install locally if missing, or use `make bug-check-strict` to match CI behavior.
-- **`staticcheck` errors like `unsupported version: 2` / failing to import stdlib**
-  - Usually an outdated `staticcheck` for Go 1.24. Reinstall the same version as CI: `go install honnef.co/go/tools/cmd/staticcheck@v0.6.0`
-- **`go install ...@latest` fails with `requires go >= 1.25.0` (or similar)**
-  - Newer gosec releases may declare a higher Go version in **their** `go.mod`; your Go 1.24 toolchain then **cannot build/install** that binary (this is not “your app must run on Go 1.25”). Pin to match CI: `go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0`
-- **Script engine/example related issues**
-  - Single-node examples (`im_single_demo`/`im_single_client`) don't require Etcd/NATS; multi-process examples typically need external dependencies reachable (see `docs/EXAMPLES.md`).
-- **Documentation link check fails**
-  - Run `make docs-check` to see broken link list, fix relative paths or adjust documentation locations.
+- **Go version mismatch**: Follow root `go.mod` and the Go badge in `README.md`.
+- **`make bug-check` missing tools**: Install the same pins as CI: `go install honnef.co/go/tools/cmd/staticcheck@v0.6.0` and `go install github.com/securego/gosec/v2/cmd/gosec@v2.22.0` (build with the same Go toolchain as the project; ensure `$(go env GOPATH)/bin` is on `PATH`).
+- **`staticcheck` errors**: Reinstall `staticcheck` with the project’s Go toolchain.
+- **Script engine/examples**: Single-node examples (`im_single_demo`/`im_single_client`) don't need Etcd/NATS; multi-process examples: see `docs/EXAMPLES.md`.
+- **Documentation link check**: Run `make docs-check` and fix reported links.
 
 ## Contributor License and CLA
 
-To ensure open source release and dual-license consistency for this project, all contributors need to agree to the contributor license terms:
+To keep licensing consistent (including dual-license terms), all contributors need to agree to the contributor license terms:
 
 - Please read and agree to `CLA.md` before your first contribution.
 - Submitting a PR confirms that you have the right to contribute that code and agree to the terms in `CLA.md`.
