@@ -23,6 +23,10 @@
 
 第八章（扩展与社区）与第 7 章 IM 实战、第 6 章可观测性可交叉阅读。
 
+## 在线阅读
+
+官网静态站已托管构建版（侧边栏目录、搜索）：<https://zhenyi-site.pages.dev/book/>
+
 ## 配套代码
 
 - **zhenyi**：https://github.com/aiyang-zh/zhenyi  
