@@ -4,7 +4,7 @@
 
 **Distributed real-time applications (Actor engine)**
 
-*Built on [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base) (MIT) · AGPL-3.0 + dual license · long-lived connections · low latency*
+*Built on [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base) (MIT); zhenyi is licensed under AGPL-3.0 + commercial dual license · long-lived connections · low latency*
 
 [![Tests](https://github.com/aiyang-zh/zhenyi/actions/workflows/test.yml/badge.svg)](https://github.com/aiyang-zh/zhenyi/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aiyang-zh/zhenyi.svg)](https://pkg.go.dev/github.com/aiyang-zh/zhenyi)

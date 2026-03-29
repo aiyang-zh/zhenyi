@@ -4,7 +4,7 @@
 
 **分布式实时应用（Actor 引擎）**
 
-*基于 [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base)（MIT）· AGPL-3.0 + 双授权 · 长连接 · 低延迟*
+*基于 [zhenyi-base](https://github.com/aiyang-zh/zhenyi-base)（MIT）；zhenyi 采用 AGPL-3.0 + 商业双授权 · 长连接 · 低延迟*
 
 [![Tests](https://github.com/aiyang-zh/zhenyi/actions/workflows/test.yml/badge.svg)](https://github.com/aiyang-zh/zhenyi/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aiyang-zh/zhenyi.svg)](https://pkg.go.dev/github.com/aiyang-zh/zhenyi)
