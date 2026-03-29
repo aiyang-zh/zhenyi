@@ -8,7 +8,7 @@
 
 [![Tests](https://github.com/aiyang-zh/zhenyi/actions/workflows/test.yml/badge.svg)](https://github.com/aiyang-zh/zhenyi/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aiyang-zh/zhenyi.svg)](https://pkg.go.dev/github.com/aiyang-zh/zhenyi)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aiyang-zh/zhenyi?style=flat-square)](https://goreportcard.com/report/github.com/aiyang-zh/zhenyi)
+[![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen?style=flat-square)](https://goreportcard.com/report/github.com/aiyang-zh/zhenyi)
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-AGPL--3.0%20%2B%20Commercial-red.svg?style=flat-square)](COMMERCIAL_LICENSE_EN.md)
 

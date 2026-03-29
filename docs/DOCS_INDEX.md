@@ -6,6 +6,7 @@
 
 ## 1. 入门与总览
 
+- [首发推广稿（掘金 / 知乎 / 微信公众号底稿）](https://github.com/aiyang-zh/zhenyi-site/blob/main/docs/promo/README.md)（维护于 **zhenyi-site** `docs/promo/`）
 - [图书：Go Actor 模型与实时应用（`docs/books/go-actor-realtime`）](books/go-actor-realtime/README.md)（与仓库实现对照阅读；许可证见该书 README）
 - [商业授权说明](../COMMERCIAL_LICENSE.md)（对外网络服务等完整口径）
 - [支持（Support）](../SUPPORT.md)
