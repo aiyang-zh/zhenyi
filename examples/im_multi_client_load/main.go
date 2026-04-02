@@ -110,7 +110,14 @@ func runOne(
 		fmt.Printf("[worker-%d] connect failed: %v\n", idx, err)
 		return
 	}
-	defer client.Close()
+	const recvFlushBatch = 64
+	recvPending := 0
+	defer func() {
+		_ = client.Close()
+		if recvPending > 0 {
+			all.recv.Add(uint64(recvPending))
+		}
+	}()
 
 	var seq atomic.Uint32
 	send := func(msgID int32, payload any) {
@@ -139,7 +146,12 @@ func runOne(
 
 	client.SetReadCall(func(w baseziface.IWireMessage) {
 		_ = w
-		all.recv.Add(1)
+		// Reduce global atomic contention: flush recv count in batches.
+		recvPending++
+		if recvPending >= recvFlushBatch {
+			all.recv.Add(uint64(recvPending))
+			recvPending = 0
+		}
 	})
 	client.Read()
 

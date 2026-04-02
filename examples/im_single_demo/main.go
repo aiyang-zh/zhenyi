@@ -180,8 +180,10 @@ func (s *GateServer) applyGMTLSCipherSuiteFlag(mode string, gmEnabled bool) {
 
 func main() {
 	var (
-		gateAddr = flag.String("addr", "127.0.0.1:8001", "gate listen addr for this demo")
-		connKind = flag.String("conn", "tcp", "listen protocol: tcp | ws (浏览器请用 ws)")
+		gateAddr         = flag.String("addr", "127.0.0.1:8001", "gate listen addr for this demo")
+		connKind         = flag.String("conn", "tcp", "listen protocol: tcp | ws (浏览器请用 ws)")
+		reactor          = flag.Bool("reactor", false, "enable TCP reactor mode (mac/linux only; requires -conn=tcp and no TLS/GM-TLS)")
+		sharedSendWorker = flag.Bool("sharedSendWorker", false, "enable shared send worker mode on gate (ztcp/zws/zkcp; default off)")
 
 		gmCert        = flag.String("gmCert", "", "国密 SM2 单证书 PEM（与 -gmKey 成对；启用 Gate GM-TLS）")
 		gmKey         = flag.String("gmKey", "", "国密 SM2 单证书私钥 PEM")
@@ -234,6 +236,8 @@ func main() {
 		s := &GateServer{
 			Server: zgate.NewServer(c, a.ConnType),
 		}
+		s.SetReactorMode(*reactor)
+		s.SetSharedSendWorkerMode(*sharedSendWorker)
 		s.applyGateGMTLS(*gmSignCert, *gmSignKey, *gmEncCert, *gmEncKey, *gmCert, *gmKey, *gmCipherSuite)
 		if k := strings.TrimSpace(*payloadEncKey); k != "" {
 			s.SetEncrypt(zencrypt.NewSM4GcmEncrypt(k))

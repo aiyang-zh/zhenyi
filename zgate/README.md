@@ -47,6 +47,8 @@ if err := gate.RunServer(ctx); err != nil {
 - `SetTraceHook`：收包路径注入链路字段
 - `SetHTTPAddr`：开启 HTTP 服务
 - `SetTLSConfig` / `SetStandardTLS` / `SetGMTLS`：加密接入
+- **`SetReactorMode(bool)`**：TCP、且**未**配置传输层 TLS/GM-TLS、底层为 `*ztcp.Server` 时，使用 **`ztcp.ServerReactor`**（Linux/macOS 上 zhenyi-base 的 epoll/kqueue 单循环读）；与 TLS 互斥。
+- **`SetSharedSendWorkerMode(bool)`**：底层 **`ztcp` / `zws` / `zkcp`**（`znet.BaseServer`）是否启用 **共享写 worker**（默认 **false**，与历史行为一致）。
 
 ## 相关文档
 

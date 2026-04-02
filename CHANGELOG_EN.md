@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+## [0.1.1] - 2026-04-02
+
+### Added
+
+- **zgate**: **`SetReactorMode(bool)`** — when **TCP**, **no transport TLS/GM-TLS**, and the underlying server is **`*ztcp.Server`**, run **`ztcp.ServerReactor`** (Linux epoll / macOS kqueue); otherwise keep the existing **`Server(ctx)`** path.
+- **zgate**: **`SetSharedSendWorkerMode(bool)`** — toggle **shared send workers** on the underlying long-lived **`IServer`** (**ztcp / zws / zkcp** via `znet.BaseServer`); **default off** (preserves historical behavior).
+- **Examples**: **`im_single_demo`** / **`im_multi_demo`** add **`--reactor`** and **`--sharedSendWorker`** and wire the Gate APIs above.
+- **`examples/mmo_web_demo`**: minimal combat loop (attack, HP, death, delayed respawn, cooldown, range checks).
+- **`examples/mmo_web_demo`**: **`world_snapshot`** / **`combat_event`** broadcast filtered by **`zaoi`** (**`WorldManager` + `Zone` + `StaticAoi`**, nine-grid + view distance).
+- **zactor**: **`SendToClient`** logs **Warn** when total time exceeds **`SlowLogThreshold`** in **`zmodel`** framework tuning, and records a split between **pre-send processing** and **`SendMsg`** latency.
+- **Tests (fuzz)**: **`go test -fuzz`** entry points in **`zcodec`**, **`zroute`**, **`zaoi`**, **`zactor`**, **`ztrace`**, **`zdiscovery`**, **`zgate`**, **`zmsg`**, **`zscript`**, etc. (no panic; key assertions).
+
+### Changed
+
+- **`examples/im_multi_client_load`**: batch-flush **recv** counter updates to reduce global atomic contention under load (still reflects received replies count).
+
+### Fixed
+
+- **`zgate` / `zmsg`**: fuzz-related tests compile and run correctly.
+
+### Documentation
+
+- **Documentation synchronized**: **`docs/EXAMPLES.md`**, **`docs/EXAMPLES_EN.md`**, **`docs/MODULE_API.md`**, **`docs/MODULE_API_EN.md`**, and **`zgate/README.md`** updated with **`--reactor` / `--sharedSendWorker`** and **`mmo_web_demo`** usage guidance.
+
 ## [0.1.0] - 2026-03-27
 
 ### Added
@@ -74,4 +100,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.1.1 | 2026-04-02 | Gateway reactor/shared-send switches, MMO AOI+combat sample, expanded fuzz coverage |
 | 0.1.0 | 2026-03-27 | Initial open source release |

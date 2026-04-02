@@ -3,7 +3,7 @@ module github.com/aiyang-zh/zhenyi
 go 1.25.0
 
 require (
-	github.com/aiyang-zh/zhenyi-base v1.1.0
+	github.com/aiyang-zh/zhenyi-base v1.1.1
 	github.com/d5/tengo/v2 v2.17.0
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
 	github.com/emmansun/gmsm v0.41.1

@@ -229,6 +229,7 @@ func (a *Actor) SendToClientByUserId(actorId uint64, userId uint64, clientMsg zi
 // SendToClient sends one client response using source metadata from request envelope.
 // SendToClient 基于请求信封元数据向客户端发送一条响应消息。
 func (a *Actor) SendToClient(msg *zmsg.Message, clientMsg ziface.IMessage) {
+	start := time.Now()
 	msgId := clientMsg.GetMsgId()
 	actorId := msg.SrcActor
 	seqId := msg.SeqId
@@ -251,6 +252,8 @@ func (a *Actor) SendToClient(msg *zmsg.Message, clientMsg ziface.IMessage) {
 			zap.Error(zerrs.Wrap(err, zerrs.ErrTypeValidation, "protobuf marshal failed")))
 		return
 	}
+	afterMarshal := time.Now()
+	marshalCost := afterMarshal.Sub(start)
 	m.MsgId = msgId
 	m.IsResponse = true
 	m.ToClient = true
@@ -262,6 +265,20 @@ func (a *Actor) SendToClient(msg *zmsg.Message, clientMsg ziface.IMessage) {
 	m.SpanId = a.GetActorId()
 	m.SessionId = msg.SessionId
 	a.SendMsg(m.Retain())
+	afterSend := time.Now()
+	sendCost := afterSend.Sub(afterMarshal)
+	totalCost := afterSend.Sub(start)
+	if totalCost > zmodel.GetFrameworkTuning().SlowLogThreshold {
+		a.GetLogger().Warn("Slow SendToClient path",
+			zap.Uint64("actorId", a.GetActorId()),
+			zap.Uint64("targetActorId", actorId),
+			zap.Int32("msgId", msgId),
+			zap.Uint64("sessionId", msg.SessionId),
+			zap.Uint32("seqId", seqId),
+			zap.Duration("cost", totalCost),
+			zap.Duration("marshalCost", marshalCost),
+			zap.Duration("sendMsgCost", sendCost))
+	}
 }
 
 // SendMsg delivers message to local actor or remote bus by target actor ID.

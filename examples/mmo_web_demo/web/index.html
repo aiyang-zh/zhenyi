@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mmo_web_demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0f19;
+      --panel: #111b2d;
+      --panel-2: #0f1725;
+      --line: #2a3a58;
+      --text: #e5efff;
+      --muted: #9eb3d1;
+      --self: #3bff9f;
+      --enemy: #6fc5ff;
+      --danger: #ff5f7a;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 400px at 50% -10%, #23406755, transparent 70%),
+        linear-gradient(180deg, #090f1a 0%, #070b14 100%);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1080px; margin: 16px auto 20px; padding: 0 14px; }
+    .topbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: linear-gradient(180deg, #14233a, #101b2c);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: inset 0 0 0 1px #ffffff08, 0 8px 20px #00000033;
+    }
+    .title {
+      min-width: 170px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #3d5c89;
+      background: linear-gradient(180deg, #193053, #152947);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #b9d8ff;
+    }
+    .ctl { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+    input {
+      width: 140px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid #2f4366;
+      background: #0d1627;
+      color: var(--text);
+      outline: none;
+    }
+    input:focus { border-color: #578de6; box-shadow: 0 0 0 2px #578de622; }
+    #wsURL { width: 220px; }
+    button {
+      border: 1px solid #4171bd;
+      background: linear-gradient(180deg, #2f79e9, #2568cf);
+      color: #fff;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #btnDisc {
+      border-color: #6b7f9e;
+      background: linear-gradient(180deg, #4f607a, #445267);
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .hud {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .panel {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .panel strong { color: #d9e9ff; }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #34527f;
+      background: #13233a;
+      color: #b7d6ff;
+      font-size: 12px;
+    }
+
+    #stageWrap {
+      margin-top: 10px;
+      width: fit-content;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 8px;
+      background: linear-gradient(180deg, #121c2d, #0e1727);
+      box-shadow: 0 12px 30px #00000044;
+      position: relative;
+    }
+    #stage {
+      width: 800px;
+      height: 500px;
+      border-radius: 10px;
+      border: 1px solid #2f425f;
+      background:
+        radial-gradient(circle at 20% 20%, #17345f33, transparent 32%),
+        radial-gradient(circle at 80% 70%, #1c4f7a33, transparent 34%),
+        linear-gradient(#121f32 1px, transparent 1px),
+        linear-gradient(90deg, #121f32 1px, transparent 1px),
+        #0f1727;
+      background-size: auto, auto, 40px 40px, 40px 40px, auto;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    #stageOverlay {
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      background: #07101ccc;
+      border: 1px solid #2f4465;
+      color: #9ec3f0;
+      pointer-events: none;
+    }
+
+    .player-root {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 38px;
+      height: 54px;
+      pointer-events: none;
+      transition: left 0.09s linear, top 0.09s linear, opacity 0.2s ease;
+    }
+    .hpbar {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: -8px;
+      width: 48px;
+      height: 6px;
+      border-radius: 999px;
+      background: #17263d;
+      border: 1px solid #294064;
+      overflow: hidden;
+    }
+    .hpfill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #1fb26f, #52ffa7);
+      transition: width 0.14s ease;
+    }
+    .player-root.enemy .hpfill { background: linear-gradient(90deg, #2f79bc, #73d4ff); }
+    .name {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: -24px;
+      font-size: 11px;
+      color: #dcecff;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .char {
+      position: absolute;
+      left: 50%;
+      top: 26px;
+      width: 20px;
+      height: 30px;
+      transform: translateX(-50%);
+    }
+    .head {
+      position: absolute;
+      left: 50%;
+      top: -8px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: #ffe1bc;
+      border: 1px solid #00000055;
+    }
+    .body {
+      position: absolute;
+      left: 50%;
+      top: 5px;
+      width: 12px;
+      height: 16px;
+      transform: translateX(-50%);
+      border-radius: 5px;
+      background: linear-gradient(180deg, #48d898, #1fa96f);
+      border: 1px solid #00000055;
+    }
+    .leg {
+      position: absolute;
+      width: 4px;
+      height: 8px;
+      background: #9cb9d8;
+      bottom: 0;
+      border-radius: 0 0 2px 2px;
+    }
+    .leg.l1 { left: 6px; }
+    .leg.l2 { right: 6px; }
+    .weapon {
+      position: absolute;
+      right: -3px;
+      top: 8px;
+      width: 10px;
+      height: 3px;
+      background: linear-gradient(90deg, #d4e7ff, #7fb7ff);
+      border-radius: 2px;
+      transform-origin: left center;
+      transform: rotate(24deg);
+      box-shadow: 0 0 6px #7fb7ff77;
+    }
+    .player-root.enemy .body { background: linear-gradient(180deg, #7ec8ff, #4592d8); }
+    .player-root.dead { opacity: 0.48; filter: grayscale(0.85); }
+    .player-root.dead .weapon { opacity: 0.3; }
+    .player-root.self .body { box-shadow: 0 0 10px #3bff9f66; }
+
+    .hit-spark {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff8 0%, #ffd19f88 35%, #ff6a6a00 72%);
+      pointer-events: none;
+      animation: spark 260ms ease-out forwards;
+    }
+    @keyframes spark {
+      0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.4); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+    }
+
+    #log {
+      margin-top: 10px;
+      height: 146px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #0d1728, #0a1322);
+      padding: 8px;
+      font-size: 13px;
+      color: #cfe4ff;
+    }
+    #log div { padding: 2px 0; border-bottom: 1px dashed #ffffff0f; }
+    #log div:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">Zhenyi MMO Demo</div>
+      <label class="ctl">WS <input id="wsURL" value="ws://127.0.0.1:8001/" /></label>
+      <label class="ctl">昵称 <input id="nick" value="alice" maxlength="24" /></label>
+      <label class="ctl">房间 <input id="room" value="world" maxlength="24" /></label>
+      <button id="btnConn">连接并进入</button>
+      <button id="btnDisc" disabled>断开</button>
+    </div>
+
+    <div class="hud">
+      <div class="panel">
+        移动：点击地图 / 方向键；攻击：`空格` 最近目标，`Shift + 点击` 指向目标。AOI：只显示视野内玩家。
+      </div>
+      <div class="panel stats">
+        <span class="badge" id="statConn">未连接</span>
+        <span class="badge" id="statRoom">room=-</span>
+        <span class="badge" id="statSelf">self=-</span>
+        <span class="badge" id="statSeen">视野=0</span>
+      </div>
+    </div>
+
+    <div id="stageWrap">
+      <div id="stage">
+        <div id="stageOverlay">AOI MMO Battlefield</div>
+      </div>
+    </div>
+    <div id="log"></div>
+  </div>
+  <script>
+    const MSG_LOGIN = 1;
+    const MSG_ENTER = 10;
+    const MSG_MOVE = 11;
+    const MSG_ATTACK = 12;
+
+    const stage = document.getElementById("stage");
+    const logEl = document.getElementById("log");
+    const $ = (id) => document.getElementById(id);
+
+    let ws = null;
+    let seq = 0;
+    let rxBuf = new Uint8Array(0);
+    let connected = false;
+    let selfId = 0;
+    let myPos = { x: 80, y: 80 };
+    let room = "world";
+    let lastPlayers = [];
+    let respawnTick = null;
+    let playerEls = new Map();
+
+    function setStatus() {
+      $("statConn").textContent = connected ? "已连接" : "未连接";
+      $("statRoom").textContent = `room=${room || "-"}`;
+      $("statSelf").textContent = `self=${selfId || "-"}`;
+      $("statSeen").textContent = `视野=${lastPlayers.length}`;
+    }
+
+    function log(s) {
+      const line = document.createElement("div");
+      line.textContent = s;
+      logEl.appendChild(line);
+      while (logEl.childElementCount > 120) logEl.removeChild(logEl.firstChild);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function packJson(msgId, obj) {
+      const body = new TextEncoder().encode(JSON.stringify(obj));
+      const buf = new ArrayBuffer(12 + body.length);
+      const dv = new DataView(buf);
+      dv.setInt32(0, msgId, false);
+      dv.setUint32(4, (++seq) >>> 0, false);
+      dv.setUint32(8, body.length, false);
+      new Uint8Array(buf, 12).set(body);
+      return buf;
+    }
+
+    function mergeBuf(a, b) {
+      const out = new Uint8Array(a.length + b.length);
+      out.set(a, 0);
+      out.set(b, a.length);
+      return out;
+    }
+
+    function ensurePlayerEl(p) {
+      let root = playerEls.get(p.sessionId);
+      if (root) return root;
+      root = document.createElement("div");
+      root.className = "player-root";
+      root.innerHTML = [
+        '<div class="name"></div>',
+        '<div class="hpbar"><div class="hpfill"></div></div>',
+        '<div class="char">',
+        '  <div class="head"></div>',
+        '  <div class="body"></div>',
+        '  <div class="weapon"></div>',
+        '  <div class="leg l1"></div>',
+        '  <div class="leg l2"></div>',
+        "</div>",
+      ].join("");
+      stage.appendChild(root);
+      playerEls.set(p.sessionId, root);
+      return root;
+    }
+
+    function drawPlayers(players) {
+      lastPlayers = Array.isArray(players) ? players : [];
+      const now = Date.now();
+      const aliveIds = new Set();
+      for (const p of lastPlayers) {
+        aliveIds.add(p.sessionId);
+        const root = ensurePlayerEl(p);
+        root.classList.toggle("self", p.sessionId === selfId);
+        root.classList.toggle("enemy", p.sessionId !== selfId);
+        root.classList.toggle("dead", !!p.dead);
+        root.style.left = `${p.x}px`;
+        root.style.top = `${p.y}px`;
+
+        const maxHp = p.maxHp > 0 ? p.maxHp : 100;
+        const hp = Math.max(0, Math.min(maxHp, p.hp | 0));
+        const hpPct = (hp / maxHp) * 100;
+        root.querySelector(".hpfill").style.width = `${hpPct}%`;
+
+        let label = `${p.nickname}#${p.sessionId} ${hp}/${maxHp}`;
+        if (p.dead && p.respawnAt) {
+          const left = Math.max(0, Math.ceil((p.respawnAt - now) / 1000));
+          label += ` · 复活 ${left}s`;
+        }
+        root.querySelector(".name").textContent = label;
+      }
+      for (const [sid, el] of playerEls.entries()) {
+        if (!aliveIds.has(sid)) {
+          el.remove();
+          playerEls.delete(sid);
+        }
+      }
+      setStatus();
+    }
+
+    function sparkAt(sessionId) {
+      const p = lastPlayers.find((x) => x.sessionId === sessionId);
+      if (!p) return;
+      const spark = document.createElement("div");
+      spark.className = "hit-spark";
+      spark.style.left = `${p.x}px`;
+      spark.style.top = `${p.y}px`;
+      stage.appendChild(spark);
+      setTimeout(() => spark.remove(), 280);
+    }
+
+    function handleDown(msgId, payload) {
+      let o = null;
+      try {
+        o = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      if (o.type === "login_ack") {
+        log(`登录成功 session=${o.sessionId} nick=${o.nickname}`);
+        return;
+      }
+      if (o.type === "enter_ack") {
+        selfId = o.selfId || 0;
+        room = o.room || room;
+        const me = (o.players || []).find((p) => p.sessionId === selfId);
+        if (me) myPos = { x: me.x, y: me.y };
+        drawPlayers(o.players || []);
+        const aoiNote = o.aoi ? `（AOI约 ${o.viewDist || "?"}px）` : "";
+        log(`进入房间 ${room}，视野内玩家 ${o.players?.length || 0}${aoiNote}`);
+        return;
+      }
+      if (o.type === "world_snapshot") {
+        const me = (o.players || []).find((p) => p.sessionId === selfId);
+        if (me) myPos = { x: me.x, y: me.y };
+        drawPlayers(o.players || []);
+        return;
+      }
+      if (o.type === "combat_event" && o.action === "hit") {
+        sparkAt(o.targetId);
+        const who = o.killed ? "（阵亡）" : "";
+        log(`战斗 #${o.attackerId} -> #${o.targetId} 伤害 ${o.damage}，目标HP ${o.targetHp}${who}`);
+        return;
+      }
+      if (o.type === "attack_ack") {
+        if (!o.ok) log(`攻击失败：${o.reason || "unknown"}`);
+        return;
+      }
+      log(`msgId=${msgId}: ${payload.slice(0, 120)}`);
+    }
+
+    function parsePackets(u8) {
+      let off = 0;
+      while (off + 12 <= u8.length) {
+        const dv = new DataView(u8.buffer, u8.byteOffset + off, 12);
+        const msgId = dv.getInt32(0, false);
+        const len = dv.getUint32(8, false);
+        if (len > (1 << 20) || off + 12 + len > u8.length) break;
+        const payload = new TextDecoder().decode(u8.subarray(off + 12, off + 12 + len));
+        handleDown(msgId, payload);
+        off += 12 + len;
+      }
+      return off;
+    }
+
+    function sendMove(x, y) {
+      if (!ws || ws.readyState !== 1) return;
+      myPos = {
+        x: Math.max(16, Math.min(784, x)),
+        y: Math.max(16, Math.min(484, y)),
+      };
+      ws.send(packJson(MSG_MOVE, myPos));
+    }
+
+    function sendAttack(targetId) {
+      if (!ws || ws.readyState !== 1) return;
+      ws.send(packJson(MSG_ATTACK, { targetId: targetId || 0 }));
+    }
+
+    function connect() {
+      const url = $("wsURL").value.trim();
+      const nick = $("nick").value.trim() || "guest";
+      room = $("room").value.trim() || "world";
+      ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
+      rxBuf = new Uint8Array(0);
+
+      ws.onopen = () => {
+        connected = true;
+        $("btnConn").disabled = true;
+        $("btnDisc").disabled = false;
+        $("nick").disabled = true;
+        $("room").disabled = true;
+        $("wsURL").disabled = true;
+        setStatus();
+        if (respawnTick) clearInterval(respawnTick);
+        respawnTick = setInterval(() => {
+          if (!connected || !lastPlayers.some((p) => p.dead)) return;
+          drawPlayers(lastPlayers.slice());
+        }, 300);
+        ws.send(packJson(MSG_LOGIN, { userId: Date.now() % 1000000, nickname: nick }));
+        ws.send(packJson(MSG_ENTER, { room, nickname: nick }));
+      };
+      ws.onclose = () => {
+        connected = false;
+        if (respawnTick) {
+          clearInterval(respawnTick);
+          respawnTick = null;
+        }
+        $("btnConn").disabled = false;
+        $("btnDisc").disabled = true;
+        $("nick").disabled = false;
+        $("room").disabled = false;
+        $("wsURL").disabled = false;
+        selfId = 0;
+        lastPlayers = [];
+        for (const el of playerEls.values()) el.remove();
+        playerEls.clear();
+        setStatus();
+        log("连接已断开");
+      };
+      ws.onerror = () => log("WebSocket 错误");
+      ws.onmessage = (ev) => {
+        if (typeof ev.data === "string") {
+          log(ev.data);
+          return;
+        }
+        rxBuf = mergeBuf(rxBuf, new Uint8Array(ev.data));
+        const used = parsePackets(rxBuf);
+        if (used > 0) rxBuf = rxBuf.subarray(used);
+      };
+    }
+
+    $("btnConn").onclick = connect;
+    $("btnDisc").onclick = () => ws && ws.close();
+
+    stage.addEventListener("click", (e) => {
+      if (!connected) return;
+      const rect = stage.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (e.shiftKey) {
+        const r2 = 28 * 28;
+        let best = null;
+        for (const p of lastPlayers) {
+          if (p.sessionId === selfId || p.dead) continue;
+          const dx = x - p.x;
+          const dy = y - p.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 <= r2 && (!best || d2 < best.d2)) best = { id: p.sessionId, d2 };
+        }
+        sendAttack(best ? best.id : 0);
+        return;
+      }
+      sendMove(x, y);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!connected) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        sendAttack(0);
+        return;
+      }
+      const step = 18;
+      if (e.key === "ArrowUp") sendMove(myPos.x, myPos.y - step);
+      if (e.key === "ArrowDown") sendMove(myPos.x, myPos.y + step);
+      if (e.key === "ArrowLeft") sendMove(myPos.x - step, myPos.y);
+      if (e.key === "ArrowRight") sendMove(myPos.x + step, myPos.y);
+    });
+
+    setStatus();
+  </script>
+</body>
+</html>

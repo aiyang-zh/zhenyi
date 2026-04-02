@@ -45,3 +45,7 @@ logs/
 *.pem.local
 *-local.toml
 *-secret.toml
+
+# Root-level runtime dir / ad-hoc `go build -o mmo_web_demo` artifact (do not commit)
+/data/
+/mmo_web_demo

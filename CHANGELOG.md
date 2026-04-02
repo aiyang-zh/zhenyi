@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] - 2026-04-02
+
+### Added
+
+- **zgate**：**`SetReactorMode(bool)`** — 在 **TCP**、**无传输层 TLS/GM-TLS**、底层为 **`*ztcp.Server`** 时走 **`ztcp.ServerReactor`**（Linux epoll / macOS kqueue）；否则保持原 **`Server(ctx)`**。
+- **zgate**：**`SetSharedSendWorkerMode(bool)`** — 将底层长连接 **`IServer`**（**ztcp / zws / zkcp**，经 `znet.BaseServer`）切到 **共享写 worker**（默认 **关闭**，与历史行为一致）。
+- **示例**：**`im_single_demo`** / **`im_multi_demo`** 增加 **`--reactor`**、**`--sharedSendWorker`**，并调用上述 Gate API。
+- **`examples/mmo_web_demo`**：浏览器 MMO 示例补充战斗循环（攻击、HP、阵亡、延迟重生、冷却与范围判定）。
+- **`examples/mmo_web_demo`**：**`world_snapshot`** / **`combat_event`** 按 **`zaoi`**（**`WorldManager` + `Zone` + `StaticAoi`** 九宫格与视距）做 AOI 过滤下发。
+- **zactor**：**`SendToClient`** 在总耗时超过 **`zmodel`** 框架调优中的 **`SlowLogThreshold`** 时打 **Warn**，并拆分记录 **前半段处理耗时** 与 **`SendMsg`** 耗时。
+- **测试（fuzz）**：**`zcodec`** / **`zroute`** / **`zaoi`** / **`zactor`** / **`ztrace`** / **`zdiscovery`** / **`zgate`** / **`zmsg`** / **`zscript`** 等包增加 **`go test -fuzz`** 入口（不 panic、关键路径断言）。
+
+### Changed
+
+- **`examples/im_multi_client_load`**：收包回调内 **recv 计数**改为 **批量 flush** 到全局原子，降低高并发下 **`recv` 原子竞争**（统计语义仍为「收到回包数」量级）。
+
+### Fixed
+
+- **`zgate` / `zmsg`**：修复核心模块 fuzz 相关测试，使其可正确编译运行。
+
+### Documentation
+
+- **文档同步更新**：**`docs/EXAMPLES.md`**、**`docs/EXAMPLES_EN.md`**、**`docs/MODULE_API.md`**、**`docs/MODULE_API_EN.md`**、**`zgate/README.md`**，补充 **`--reactor` / `--sharedSendWorker`** 与 **`mmo_web_demo`** 的使用说明。
+
 ## [0.1.0] - 2026-03-27
 
 ### Added
@@ -74,4 +98,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| 0.1.1 | 2026-04-02 | 网关 reactor/共享写开关、MMO AOI+战斗示例、fuzz 覆盖扩展 |
 | 0.1.0 | 2026-03-27 | 首次开源 |

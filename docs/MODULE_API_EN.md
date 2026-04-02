@@ -11,6 +11,7 @@ This document provides module-level API entry index to help quickly locate "wher
 
 - `zgate`: Unified gateway (TCP/WS/KCP), session mapping, send/receive pipeline
   - Common: `NewServer`, `Init`, `RunServer`, `SetHTTPAddr`, `SetTLSConfig`
+  - Performance/model: `SetReactorMode` (optional reactor read path for TCP without TLS), `SetSharedSendWorkerMode` (shared send worker, default off)
 - `zhttp`: Optional HTTP service capability
 
 ## 3. Actor & Messaging

@@ -40,7 +40,7 @@ go run ./examples/im_single_demo
 # Second terminal: go run ./examples/im_single_client
 ```
 
-The single-process demo **does not** require Etcd/NATS; multi-process examples (e.g. `im_multi_demo`) need Etcd + NATS → **[Examples overview](docs/EXAMPLES_EN.md)**.
+The single-process demo **does not** require Etcd/NATS; multi-process examples (e.g. `im_multi_demo`) need Etcd + NATS → **[Examples overview](docs/EXAMPLES_EN.md)** (including **`--reactor` / `--sharedSendWorker`** and **`mmo_web_demo`**).
 
 ## Documentation
 

@@ -40,7 +40,7 @@ go run ./examples/im_single_demo
 # 另开终端：go run ./examples/im_single_client
 ```
 
-单机示例 **不依赖** Etcd/NATS；多进程示例（如 `im_multi_demo`）需要 Etcd + NATS → **[示例总览](docs/EXAMPLES.md)**。
+单机示例 **不依赖** Etcd/NATS；多进程示例（如 `im_multi_demo`）需要 Etcd + NATS → **[示例总览](docs/EXAMPLES.md)**（含 **`--reactor` / `--sharedSendWorker`**、**`mmo_web_demo`** 等）。
 
 ## 文档导航
 

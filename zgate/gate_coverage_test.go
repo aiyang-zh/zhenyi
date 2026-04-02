@@ -141,6 +141,8 @@ func (s *fakeServer) RemoveChannel(channelId uint64) {
 }
 func (s *fakeServer) SetEncrypt(iEncrypt baseziface.IEncrypt) { _ = iEncrypt }
 func (s *fakeServer) SyncMode() bool                          { return false }
+func (s *fakeServer) SetSharedSendWorkerMode(enabled bool)    { _ = enabled }
+func (s *fakeServer) SharedSendWorkerMode() bool              { return false }
 
 type fakeBus struct {
 	mu        sync.Mutex

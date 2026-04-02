@@ -138,6 +138,8 @@ func main() {
 	etcdEP := flag.String("etcd", "127.0.0.1:2379", "etcd endpoint")
 	codec := flag.String("codec", "json", "payload codec: json|msgpack")
 	benchMode := flag.String("benchMode", "business", "bench mode: business|framework")
+	reactor := flag.Bool("reactor", false, "enable TCP reactor mode for gate (mac/linux only; requires no TLS/GM-TLS)")
+	sharedSendWorker := flag.Bool("sharedSendWorker", false, "enable shared send worker mode on gate (ztcp/zws/zkcp; default off)")
 	flag.Parse()
 	selectedCodec := strings.ToLower(*codec)
 	if selectedCodec != "json" && selectedCodec != "msgpack" {
@@ -203,6 +205,8 @@ func main() {
 
 	err = app.RegisterActorFactory(ActorTypeGate, func(a *zstartup.App, c zmodel.ActorConfig) ziface.IServerActor {
 		s := zgate.NewServer(c, a.ConnType)
+		s.SetReactorMode(*reactor)
+		s.SetSharedSendWorkerMode(*sharedSendWorker)
 		s.GetHandleMgr().RegisterHandle(MsgLoginReq, func(ctx context.Context, msg *zmsg.Message) {
 			var req struct {
 				UserID int64 `json:"userId"`

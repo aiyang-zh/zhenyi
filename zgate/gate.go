@@ -61,6 +61,13 @@ type Server struct {
 	// payloadEncrypt 线协议 body 层加解密（在 TLS 记录之内、12 字节头之后的 payload）。
 	// 非 nil 时在 NewNetServer 内调用底层 IServer.SetEncrypt；nil 表示使用默认 BaseEncrypt（不加密）。
 	payloadEncrypt baseziface.IEncrypt
+
+	// useReactorMode enables ztcp ServerReactor (zreactor) for single-loop TCP read.
+	// useReactorMode 会让 Gate 在满足条件时调用底层 ztcp.ServerReactor。
+	useReactorMode bool
+	// useSharedSendWorkerMode enables shared send workers on underlying net server.
+	// useSharedSendWorkerMode 开启底层共享写 worker 模式（默认关闭，保持历史行为）。
+	useSharedSendWorkerMode bool
 }
 
 // NewServer creates a gateway server actor with given actor config and connection protocol.
@@ -119,6 +126,27 @@ func (s *Server) SetTLSConfig(cfg *baseziface.TLSConfig) {
 // 在 RegisterActorFactory 里、Init 之前调用；NewNetServer 时下发到底层 Server。
 func (s *Server) SetEncrypt(enc baseziface.IEncrypt) {
 	s.payloadEncrypt = enc
+}
+
+// SetReactorMode enables/disables reactor mode for TCP read.
+// When enabled, Gate will call ztcp.ServerReactor if:
+// - connType == TCP
+// - tlsConfig == nil (transport TLS not supported by reactor)
+// - underlying server is *ztcp.Server
+func (s *Server) SetReactorMode(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.useReactorMode = enabled
+}
+
+// SetSharedSendWorkerMode enables/disables shared send worker mode.
+// It applies to underlying servers that support this capability (ztcp/zws/zkcp via znet.BaseServer).
+func (s *Server) SetSharedSendWorkerMode(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.useSharedSendWorkerMode = enabled
 }
 
 // SetStandardTLS configures standard TLS (RSA/ECDSA) by cert files.
@@ -239,6 +267,9 @@ func (s *Server) NewNetServer(ctx context.Context, connType znet.ConnProtocol, a
 	// Attach connection-level metrics to align zmetrics.Conn* and byte counters.
 	// 为底层网络服务器注入连接级与单连接级指标，实现 zmetrics.Conn* 与字节统计对齐。
 	if s.server != nil {
+		if ssw, ok := s.server.(interface{ SetSharedSendWorkerMode(bool) }); ok {
+			ssw.SetSharedSendWorkerMode(s.useSharedSendWorkerMode)
+		}
 		if s.tlsConfig != nil {
 			s.server.SetTLSConfig(s.tlsConfig)
 		}
@@ -653,8 +684,28 @@ func (s *Server) Close(ctx context.Context) error {
 // RunServer 启动长连接 Server 与可选 HTTP Server，然后执行可选初始化钩子。
 func (s *Server) RunServer(ctx context.Context) error {
 	if s.server != nil {
-		s.server.Server(ctx)
-		s.GetLogger().Info("Gate long-conn listening", zap.String("addr", s.Addr))
+		// Reactor mode is a single-loop TCP read path. Transport TLS is not supported.
+		if s.useReactorMode && s.connType == znet.TCP && s.tlsConfig == nil {
+			if tcpSrv, ok := s.server.(*ztcp.Server); ok {
+				// ServerReactor 在 !linux/!darwin 的 stub 中会 panic；这里显式回退，避免把整个进程打崩。
+				if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+					go func() {
+						defer s.GetLogger().Recover("GateServer.Reactor")
+						tcpSrv.ServerReactor(ctx)
+					}()
+					s.GetLogger().Info("Gate long-conn listening (reactor)", zap.String("addr", s.Addr))
+				} else {
+					s.server.Server(ctx)
+					s.GetLogger().Info("Gate long-conn listening", zap.String("addr", s.Addr))
+				}
+			} else {
+				s.server.Server(ctx)
+				s.GetLogger().Info("Gate long-conn listening", zap.String("addr", s.Addr))
+			}
+		} else {
+			s.server.Server(ctx)
+			s.GetLogger().Info("Gate long-conn listening", zap.String("addr", s.Addr))
+		}
 	}
 	if s.httpAddr != "" {
 		go func() {
