@@ -49,6 +49,7 @@ if err := gate.RunServer(ctx); err != nil {
 - `SetTLSConfig` / `SetStandardTLS` / `SetGMTLS`：加密接入
 - **`SetReactorMode(bool)`**：TCP、且**未**配置传输层 TLS/GM-TLS、底层为 `*ztcp.Server` 时，使用 **`ztcp.ServerReactor`**（Linux/macOS 上 zhenyi-base 的 epoll/kqueue 单循环读）；与 TLS 互斥。
 - **`SetSharedSendWorkerMode(bool)`**：底层 **`ztcp` / `zws` / `zkcp`**（`znet.BaseServer`）是否启用 **共享写 worker**（默认 **false**，与历史行为一致）。
+- **`WithNetServerHook`**：底层 `ztcp/zws/zkcp` Server 创建并完成 TLS/encrypt/shared-send 注入后回调，可对底层 `IServer`（通常为 `znet.BaseServer`）做额外调参（如 `SetHeartbeatTimeout`）；多次调用按注册顺序链式执行。
 
 ## 相关文档
 

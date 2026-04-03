@@ -132,6 +132,7 @@
       position: absolute;
       left: 18px;
       top: 18px;
+      z-index: 3;
       padding: 6px 10px;
       border-radius: 8px;
       font-size: 12px;
@@ -141,8 +142,27 @@
       pointer-events: none;
     }
 
+    #attackRangeRing {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-radius: 50%;
+      box-sizing: border-box;
+      border: 2px dashed rgba(255, 130, 95, 0.55);
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255, 95, 70, 0.07) 0%, transparent 68%);
+      box-shadow: inset 0 0 24px rgba(255, 100, 70, 0.06);
+      z-index: 1;
+      visibility: hidden;
+    }
+    #attackRangeRing.dead {
+      opacity: 0.35;
+      filter: grayscale(0.4);
+    }
+
     .player-root {
       position: absolute;
+      z-index: 2;
       transform: translate(-50%, -50%);
       width: 38px;
       height: 54px;
@@ -279,7 +299,7 @@
 
     <div class="hud">
       <div class="panel">
-        移动：点击地图 / 方向键；攻击：`空格` 最近目标，`Shift + 点击` 指向目标。AOI：只显示视野内玩家。
+        移动：点击地图 / 方向键；脚下 <strong>橙色虚线圆</strong> 为近战攻击距离（与服端一致）；攻击：`空格` 在范围内选最近目标；`Shift + 点击` 点选角色（须在范围内，否则失败）；未点中角色时与空格相同。AOI：只显示视野内玩家。
       </div>
       <div class="panel stats">
         <span class="badge" id="statConn">未连接</span>
@@ -292,6 +312,7 @@
     <div id="stageWrap">
       <div id="stage">
         <div id="stageOverlay">AOI MMO Battlefield</div>
+        <div id="attackRangeRing" aria-hidden="true"></div>
       </div>
     </div>
     <div id="log"></div>
@@ -316,6 +337,25 @@
     let lastPlayers = [];
     let respawnTick = null;
     let playerEls = new Map();
+    /** 与服端 attackRange 一致，enter/snapshot 会覆盖 */
+    let attackRangePx = 56;
+
+    function updateAttackRangeRing() {
+      const ring = $("attackRangeRing");
+      if (!ring) return;
+      if (!connected || !selfId) {
+        ring.style.visibility = "hidden";
+        return;
+      }
+      const r = attackRangePx > 0 ? attackRangePx : 56;
+      ring.style.visibility = "visible";
+      ring.style.left = `${myPos.x - r}px`;
+      ring.style.top = `${myPos.y - r}px`;
+      ring.style.width = `${r * 2}px`;
+      ring.style.height = `${r * 2}px`;
+      const me = lastPlayers.find((p) => p.sessionId === selfId);
+      ring.classList.toggle("dead", !!(me && me.dead));
+    }
 
     function setStatus() {
       $("statConn").textContent = connected ? "已连接" : "未连接";
@@ -403,6 +443,7 @@
         }
       }
       setStatus();
+      updateAttackRangeRing();
     }
 
     function sparkAt(sessionId) {
@@ -430,6 +471,7 @@
       if (o.type === "enter_ack") {
         selfId = o.selfId || 0;
         room = o.room || room;
+        if (o.attackRange != null && Number.isFinite(o.attackRange)) attackRangePx = o.attackRange;
         const me = (o.players || []).find((p) => p.sessionId === selfId);
         if (me) myPos = { x: me.x, y: me.y };
         drawPlayers(o.players || []);
@@ -438,6 +480,7 @@
         return;
       }
       if (o.type === "world_snapshot") {
+        if (o.attackRange != null && Number.isFinite(o.attackRange)) attackRangePx = o.attackRange;
         const me = (o.players || []).find((p) => p.sessionId === selfId);
         if (me) myPos = { x: me.x, y: me.y };
         drawPlayers(o.players || []);
@@ -477,11 +520,24 @@
         y: Math.max(16, Math.min(484, y)),
       };
       ws.send(packJson(MSG_MOVE, myPos));
+      updateAttackRangeRing();
     }
 
     function sendAttack(targetId) {
       if (!ws || ws.readyState !== 1) return;
       ws.send(packJson(MSG_ATTACK, { targetId: targetId || 0 }));
+    }
+
+    // 与 #stage 内 .player-root 尺寸一致（width/height，锚点为 translate(-50%,-50%) 的中心）
+    const PLAYER_HIT_W = 38;
+    const PLAYER_HIT_H = 54;
+
+    /** 点 (x,y) 是否落在以 (p.x,p.y) 为中心的角色包围盒内；重叠时由调用方逆序遍历实现「点最上层」 */
+    function hitPlayerAtScreen(x, y, p) {
+      if (p.sessionId === selfId || p.dead) return false;
+      const hw = PLAYER_HIT_W * 0.5;
+      const hh = PLAYER_HIT_H * 0.5;
+      return Math.abs(x - p.x) <= hw && Math.abs(y - p.y) <= hh;
     }
 
     function connect() {
@@ -525,6 +581,7 @@
         playerEls.clear();
         setStatus();
         log("连接已断开");
+        updateAttackRangeRing();
       };
       ws.onerror = () => log("WebSocket 错误");
       ws.onmessage = (ev) => {
@@ -547,16 +604,14 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       if (e.shiftKey) {
-        const r2 = 28 * 28;
-        let best = null;
-        for (const p of lastPlayers) {
-          if (p.sessionId === selfId || p.dead) continue;
-          const dx = x - p.x;
-          const dy = y - p.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 <= r2 && (!best || d2 < best.d2)) best = { id: p.sessionId, d2 };
+        for (let i = lastPlayers.length - 1; i >= 0; i--) {
+          const p = lastPlayers[i];
+          if (hitPlayerAtScreen(x, y, p)) {
+            sendAttack(p.sessionId);
+            return;
+          }
         }
-        sendAttack(best ? best.id : 0);
+        sendAttack(0);
         return;
       }
       sendMove(x, y);

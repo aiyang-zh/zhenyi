@@ -294,11 +294,12 @@ func (s *MmoServer) broadcastSnapshot(origin *zmsg.Message, room string) {
 		}
 		plist := s.visiblePlayerList(p, room)
 		snap, err := zcodec.NewJSONMessage(MsgMoveReq, map[string]any{
-			"type":     "world_snapshot",
-			"room":     room,
-			"players":  plist,
-			"aoi":      true,
-			"viewDist": playerViewDist,
+			"type":        "world_snapshot",
+			"room":        room,
+			"players":     plist,
+			"aoi":         true,
+			"viewDist":    playerViewDist,
+			"attackRange": attackRange,
 		})
 		if err != nil {
 			panic(err)
@@ -317,8 +318,7 @@ func (s *MmoServer) broadcastCombat(origin *zmsg.Message, room string, att, tgt 
 	}
 }
 
-func (s *MmoServer) flushRespawns(origin *zmsg.Message) {
-	nowMs := time.Now().UnixMilli()
+func (s *MmoServer) flushRespawns(origin *zmsg.Message, nowMs int64) {
 	rooms, revived := s.state.applyRespawns(nowMs)
 	for _, p := range revived {
 		if p.GetAoiNode() != nil {
@@ -338,6 +338,8 @@ func (s *MmoServer) pickAttackTarget(attacker *player, preferID uint64) *player 
 		if t != nil && t.Room == attacker.Room && !t.Dead && dist2(attacker.X, attacker.Y, t.X, t.Y) <= r2 {
 			return t
 		}
+		// 客户端显式指定了目标但不可攻击：不再退化为「打最近」，避免与点选语义冲突
+		return nil
 	}
 	var best *player
 	var bestD float64
@@ -385,7 +387,7 @@ func (s *MmoServer) onSessionClose(sessionID uint64) {
 func (s *MmoServer) tickRespawn(ctx context.Context, nowTs int64) {
 	_ = ctx
 	origin := &zmsg.Message{SrcActor: s.gateID}
-	s.flushRespawns(origin)
+	s.flushRespawns(origin, nowTs)
 }
 
 func main() {
@@ -434,6 +436,10 @@ func main() {
 	err := app.RegisterActorFactory(ActorTypeGate, func(a *zstartup.App, c zmodel.ActorConfig) ziface.IServerActor {
 		s := zgate.NewServer(c, a.ConnType)
 		s.SetReactorMode(*reactor)
+		// Demo: disable idle read deadline (znet heartbeat) via hook — no extra zgate API per knob.
+		s.WithNetServerHook(func(srv baseziface.IServer) {
+			srv.SetHeartbeatTimeout(0)
+		})
 		s.OnChannelClose(func(ch baseziface.IChannel) {
 			if mmoSrv == nil || ch == nil {
 				return
@@ -485,7 +491,7 @@ func main() {
 		mmoSrv = s
 		s.RegisterTickFn("respawn_tick", 200*time.Millisecond, s.tickRespawn)
 		s.GetHandleMgr().RegisterHandle(MsgEnterReq, func(ctx context.Context, msg *zmsg.Message) {
-			s.flushRespawns(msg)
+			s.flushRespawns(msg, time.Now().UnixMilli())
 			var req struct {
 				Nickname string `json:"nickname"`
 				Room     string `json:"room"`
@@ -505,22 +511,28 @@ func main() {
 
 			players := s.visiblePlayerList(p, newRoom)
 			enterAck, err := zcodec.NewJSONMessage(MsgEnterReq, map[string]any{
-				"type":      "enter_ack",
-				"ok":        true,
-				"room":      newRoom,
-				"selfId":    p.SessionID,
-				"players":   players,
-				"aoi":       true,
-				"viewDist":  playerViewDist,
-				"worldSize": map[string]float64{"width": 800, "height": 500},
+				"type":        "enter_ack",
+				"ok":          true,
+				"room":        newRoom,
+				"selfId":      p.SessionID,
+				"players":     players,
+				"aoi":         true,
+				"viewDist":    playerViewDist,
+				"attackRange": attackRange,
+				"worldSize":   map[string]float64{"width": 800, "height": 500},
 			})
 			if err != nil {
 				panic(err)
 			}
 			s.SendToClient(msg, enterAck)
+			// 否则仅新连接收到 enter_ack，房内其他客户端要等某次移动才会 world_snapshot，后进入者不会出现在先进入者画面上
+			if prevRoom != "" && prevRoom != newRoom {
+				s.broadcastSnapshot(msg, prevRoom)
+			}
+			s.broadcastSnapshot(msg, newRoom)
 		})
 		s.GetHandleMgr().RegisterHandle(MsgMoveReq, func(ctx context.Context, msg *zmsg.Message) {
-			s.flushRespawns(msg)
+			s.flushRespawns(msg, time.Now().UnixMilli())
 			var req struct {
 				X float64 `json:"x"`
 				Y float64 `json:"y"`
@@ -539,7 +551,7 @@ func main() {
 			s.broadcastSnapshot(msg, p.Room)
 		})
 		s.GetHandleMgr().RegisterHandle(MsgAttackReq, func(ctx context.Context, msg *zmsg.Message) {
-			s.flushRespawns(msg)
+			s.flushRespawns(msg, time.Now().UnixMilli())
 			var req struct {
 				TargetID uint64 `json:"targetId"`
 			}

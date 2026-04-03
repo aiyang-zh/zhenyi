@@ -24,6 +24,18 @@ go run ./examples/im_single_demo
 go run ./examples/im_single_demo --reactor --sharedSendWorker
 ```
 
+### `examples/im_single_demo_bench`
+
+- 作用：单机压测/调优示例（连接规模、QPS、尾延迟）
+- 适用：框架路径压测、reactor/shared-send 调参、pprof/pyroscope 观测
+- 说明：该示例偏压测，不等同于完整聊天室语义
+
+运行：
+
+```bash
+go run ./examples/im_single_demo_bench --reactor --sharedSendWorker --benchMode framework --codec msgpack
+```
+
 ### `examples/im_single_client`
 
 - 作用：与单机 demo 配套的最小客户端

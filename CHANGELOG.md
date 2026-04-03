@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2026-04-03
+
+### Added
+
+- **zgate**：**`WithNetServerHook(func(IServer))`** — 底层 **ztcp/zws/zkcp** Server 创建并完成 TLS/encrypt/shared-send 注入后回调，便于对 **`znet.BaseServer`** 等做额外调参（如 **`SetHeartbeatTimeout`**）；多次注册按顺序链式执行。
+- **`examples/mmo_web_demo`**：进入房间后向新房及（换房时的）旧房广播 **`world_snapshot`**，同步房内其他客户端列表。
+- **`examples/mmo_web_demo`**：**`enter_ack`** / **`world_snapshot`** 增加 **`attackRange`**；Web 端绘制脚下近战攻击范围圈并与服务端一致。
+- **文档**：**`docs/EXAMPLES.md`** / **`docs/EXAMPLES_EN.md`** 增加 **`im_single_demo_bench`** 说明与运行示例。
+
+### Changed
+
+- **`examples/mmo_web_demo`**：**`pickAttackTarget`** 在显式 **`targetId`** 不可攻击时 **不再** 退化为「打最近」；**`flushRespawns`** 改为接收调用方传入的 **时间戳**（与 Tick/消息处理一致）。
+- **`examples/mmo_web_demo`（Web）**：**Shift+点击** 使用与角色精灵一致的 **AABB** 命中，并按绘制顺序 **逆序** 命中最上层目标。
+
+### Fixed
+
+- **`examples/mmo_web_demo`**：修复仅 **`enter_ack`** 发给新连接、先进入者需等待 **`MSG_MOVE`** 才能看到后进者的问题。
+
+### Documentation
+
+- **`docs/MODULE_API.md`** / **`docs/MODULE_API_EN.md`**、**`zgate/README.md`**：补充 **`WithNetServerHook`**。
+- **`examples/im_single_demo/README.md`**：补充 **TLS/GM-TLS** 说明及 **`--reactor`**、**`--sharedSendWorker`** 参数表项。
+- **`examples/mmo_web_demo/README.md`**：说明 Demo 通过 **`WithNetServerHook`** 禁用空闲读超时以便本地体验。
+
 ## [0.1.1] - 2026-04-02
 
 ### Added
@@ -98,5 +122,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| 0.1.1 | 2026-04-03 | zgate `WithNetServerHook`、mmo 进入房间快照同步与近战范围展示、文档与示例补充 |
 | 0.1.1 | 2026-04-02 | 网关 reactor/共享写开关、MMO AOI+战斗示例、fuzz 覆盖扩展 |
 | 0.1.0 | 2026-03-27 | 首次开源 |

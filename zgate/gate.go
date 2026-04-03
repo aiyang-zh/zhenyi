@@ -62,6 +62,10 @@ type Server struct {
 	// 非 nil 时在 NewNetServer 内调用底层 IServer.SetEncrypt；nil 表示使用默认 BaseEncrypt（不加密）。
 	payloadEncrypt baseziface.IEncrypt
 
+	// netServerHook runs after underlying ztcp/zws/zkcp server is created and TLS/encrypt/shared-send are applied.
+	// Use WithNetServerHook to tune BaseServer (e.g. SetHeartbeatTimeout). Multiple calls chain in order.
+	netServerHook func(baseziface.IServer)
+
 	// useReactorMode enables ztcp ServerReactor (zreactor) for single-loop TCP read.
 	// useReactorMode 会让 Gate 在满足条件时调用底层 ztcp.ServerReactor。
 	useReactorMode bool
@@ -126,6 +130,22 @@ func (s *Server) SetTLSConfig(cfg *baseziface.TLSConfig) {
 // 在 RegisterActorFactory 里、Init 之前调用；NewNetServer 时下发到底层 Server。
 func (s *Server) SetEncrypt(enc baseziface.IEncrypt) {
 	s.payloadEncrypt = enc
+}
+
+// WithNetServerHook registers a callback invoked after the underlying net server (ztcp/zws/zkcp) is created
+// and Gate applies shared-send / TLS / payload encrypt. Use it for extra tuning without extending zgate for each knob.
+// Call before Init/RunServer. Multiple calls chain in registration order.
+func (s *Server) WithNetServerHook(fn func(baseziface.IServer)) {
+	if s == nil || fn == nil {
+		return
+	}
+	prev := s.netServerHook
+	s.netServerHook = func(srv baseziface.IServer) {
+		if prev != nil {
+			prev(srv)
+		}
+		fn(srv)
+	}
 }
 
 // SetReactorMode enables/disables reactor mode for TCP read.
@@ -275,6 +295,9 @@ func (s *Server) NewNetServer(ctx context.Context, connType znet.ConnProtocol, a
 		}
 		if s.payloadEncrypt != nil {
 			s.server.SetEncrypt(s.payloadEncrypt)
+		}
+		if s.netServerHook != nil {
+			s.netServerHook(s.server)
 		}
 		attachNetMetrics(s.server)
 	}

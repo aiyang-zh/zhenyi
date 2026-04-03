@@ -24,6 +24,18 @@ Shared send + reactor:
 go run ./examples/im_single_demo --reactor --sharedSendWorker
 ```
 
+### `examples/im_single_demo_bench`
+
+- Purpose: single-node benchmark/tuning example (connections, QPS, tail latency)
+- Suitable for: framework-path benchmarking, reactor/shared-send tuning, pprof/pyroscope observation
+- Note: benchmark-oriented; not equivalent to full chat-room semantics
+
+Run:
+
+```bash
+go run ./examples/im_single_demo_bench --reactor --sharedSendWorker --benchMode framework --codec msgpack
+```
+
 ### `examples/im_single_client`
 
 - Purpose: Minimal client paired with single-node demo

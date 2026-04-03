@@ -11,7 +11,7 @@
 
 - `zgate`：统一网关（TCP/WS/KCP），会话映射、收发链路
   - 常用：`NewServer`、`Init`、`RunServer`、`SetHTTPAddr`、`SetTLSConfig`
-  - 性能/模型：`SetReactorMode`（TCP 无 TLS 时可选 reactor 读）、`SetSharedSendWorkerMode`（共享写 worker，默认关）
+  - 性能/模型：`SetReactorMode`（TCP 无 TLS 时可选 reactor 读）、`SetSharedSendWorkerMode`（共享写 worker，默认关）、`WithNetServerHook`（底层 net server 创建后回调，用于 `SetHeartbeatTimeout` 等扩展调参）
 - `zhttp`：可选 HTTP 服务能力
 
 ## 3. Actor 与消息
