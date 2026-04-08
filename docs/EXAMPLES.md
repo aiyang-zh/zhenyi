@@ -4,6 +4,23 @@
 
 ## 1. 单机最小闭环
 
+### `examples/echo_demo`
+
+- 作用：最小可运行示例（Gate 接入 + 业务 Actor 收发一条消息）
+- 适用：5 分钟跑通链路、排查环境问题、理解消息处理模型
+
+运行服务端：
+
+```bash
+go run ./examples/echo_demo -conn tcp -addr 127.0.0.1:8021
+```
+
+另开终端运行客户端：
+
+```bash
+go run ./examples/echo_client -addr 127.0.0.1:8021 -text "hello zhenyi"
+```
+
 ### `examples/im_single_demo`
 
 - 作用：单机 Gate + Actor 运行示例
@@ -87,17 +104,18 @@ go run ./examples/im_multi_client_load
 go run ./examples/mmo_web_demo -conn ws -addr 127.0.0.1:8001
 ```
 
-另开终端启动静态文件服务：
+浏览器打开：
 
-```bash
-python3 -m http.server 8080 -d ./examples/mmo_web_demo/web
-```
+`http://127.0.0.1:8080/mmo_web_demo/web/`
 
-浏览器访问 `http://127.0.0.1:8080/`，可多开标签页联调。
+说明：
+
+- 示例默认会同时启动静态页面服务（`-web 127.0.0.1:8080`），不依赖 Python。
+- 静态服务默认以 `./examples` 作为根目录（`-webRoot` 可改），以便复用公共前端 SDK：`/_shared/web/zhenyi-ws-sdk.js`。
 
 ## 4. 示例使用建议
 
-- 先跑单机（`im_single_demo` + `im_single_client`）
+- 先跑单机（`echo_demo` 或 `im_single_demo` + `im_single_client`）
 - 再跑浏览器接入（`mmo_web_demo`）
 - 再切到多进程（`im_multi_demo`）
 - 最后用 `im_multi_client_load` 做压力验证

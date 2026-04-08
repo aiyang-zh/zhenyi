@@ -4,6 +4,23 @@ This document summarizes the runnable examples in the repository and their purpo
 
 ## 1. Single Node Minimal
 
+### `examples/echo_demo`
+
+- Purpose: Minimal runnable example (Gate access + one business Actor handling one request/response)
+- Suitable for: Running the full path in 5 minutes, troubleshooting environment issues, understanding the message handling model
+
+Run server:
+
+```bash
+go run ./examples/echo_demo -conn tcp -addr 127.0.0.1:8021
+```
+
+In another terminal, run client:
+
+```bash
+go run ./examples/echo_client -addr 127.0.0.1:8021 -text "hello zhenyi"
+```
+
 ### `examples/im_single_demo`
 
 - Purpose: Single-node Gate + Actor running example
@@ -87,17 +104,18 @@ Server:
 go run ./examples/mmo_web_demo -conn ws -addr 127.0.0.1:8001
 ```
 
-In another terminal, serve static files:
+Open in browser:
 
-```bash
-python3 -m http.server 8080 -d ./examples/mmo_web_demo/web
-```
+`http://127.0.0.1:8080/mmo_web_demo/web/`
 
-Open `http://127.0.0.1:8080/` in the browser; multiple tabs for multi-client testing.
+Notes:
+
+- The example starts a built-in static file server by default (`-web 127.0.0.1:8080`), no Python required.
+- The static server uses `./examples` as web root by default (`-webRoot` can override), so demos can share the browser SDK at `/_shared/web/zhenyi-ws-sdk.js`.
 
 ## 4. Example Usage Suggestions
 
-- First run single-node (`im_single_demo` + `im_single_client`)
+- First run single-node (`echo_demo` or `im_single_demo` + `im_single_client`)
 - Then try browser access (`mmo_web_demo`)
 - Then switch to multi-process (`im_multi_demo`)
 - Finally use `im_multi_client_load` for stress testing

@@ -478,7 +478,7 @@ func (a *Actor) Run(ctx context.Context) {
 
 		if n == 0 {
 			idleCount++
-			zbackoff.Backoff(idleCount, 10, 30, time.Microsecond)
+			zbackoff.Backoff(idleCount, 10, 30, time.Millisecond)
 
 			// ✅ 空闲时重置 lastBatchSize，避免使用过期的预测数据
 			lastBatchSize = 1

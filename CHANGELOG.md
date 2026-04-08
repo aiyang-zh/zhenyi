@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **`examples/mmo_web_demo`**：修复仅 **`enter_ack`** 发给新连接、先进入者需等待 **`MSG_MOVE`** 才能看到后进者的问题。
+- **zactor**：修复 Actor 空闲时 CPU 过高（调整空闲 backoff 的 sleep 粒度，避免忙等空转）。
 
 ### Documentation
 

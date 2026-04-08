@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-04-03
+
+### Added
+
+- **zgate**: **`WithNetServerHook(func(IServer))`** — a hook invoked after the underlying **ztcp/zws/zkcp** server is created and injected with TLS/encrypt/shared-send; useful for extra tuning on **`znet.BaseServer`** (e.g. **`SetHeartbeatTimeout`**). Multiple hooks are chained in registration order.
+- **`examples/mmo_web_demo`**: broadcast **`world_snapshot`** to the new room (and the previous room on room switch) after entering, so peers see each other immediately.
+- **`examples/mmo_web_demo`**: add **`attackRange`** to **`enter_ack`** / **`world_snapshot`**; the Web client draws a melee range ring consistent with the server.
+- **Docs**: **`docs/EXAMPLES.md`** / **`docs/EXAMPLES_EN.md`** add `im_single_demo_bench` description and run example.
+
+### Changed
+
+- **`examples/mmo_web_demo`**: **`pickAttackTarget`** no longer falls back to "attack nearest" when an explicit **`targetId`** is invalid/out of range; **`flushRespawns`** now takes a unified timestamp passed in by the caller.
+- **`examples/mmo_web_demo` (Web)**: Shift+Click uses an **AABB** hit test matching the sprite size, and picks the topmost target by iterating draw order in reverse.
+
+### Fixed
+
+- **`examples/mmo_web_demo`**: fix late-join synchronization where existing players couldn't see newcomers until a **`MSG_MOVE`** was received.
+- **zactor**: fix high CPU usage when Actors are idle (adjust idle backoff sleep granularity to avoid busy spinning).
+
+### Documentation
+
+- **`docs/MODULE_API.md`** / **`docs/MODULE_API_EN.md`** and **`zgate/README.md`**: document **`WithNetServerHook`**.
+- **`examples/im_single_demo/README.md`**: add TLS/GM-TLS notes and document **`--reactor`** / **`--sharedSendWorker`** flags.
+- **`examples/mmo_web_demo/README.md`**: note that the demo disables idle read timeout via **`WithNetServerHook`** for local UX.
+
 ## [0.1.1] - 2026-04-02
 
 ### Added
