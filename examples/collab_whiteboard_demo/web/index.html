@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>collab_whiteboard_demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09101b;
+      --panel: #111d31;
+      --line: #2c4268;
+      --text: #e9f2ff;
+      --muted: #9db3d1;
+      --accent: #5fa8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(1000px 400px at 50% -20%, #1f396055, transparent 70%), linear-gradient(180deg, #070d17, #060b14);
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 16px auto; padding: 0 12px; }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .title { font-weight: 700; color: #b8d8ff; margin-right: 8px; }
+    label { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+    input, select {
+      background: #0d1626;
+      border: 1px solid #35517d;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 9px;
+    }
+    #wsURL { width: 220px; }
+    #nick, #room { width: 110px; }
+    button {
+      border: 1px solid #4479c6;
+      background: linear-gradient(180deg, #377ce8, #2f6fce);
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      border-color: #6a7ea0;
+      background: linear-gradient(180deg, #4f6078, #43556d);
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .panel {
+      margin-top: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    #boardWrap {
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 8px;
+      background: #0f1829;
+      width: fit-content;
+    }
+    #board {
+      width: 980px;
+      height: 560px;
+      border-radius: 10px;
+      border: 1px solid #2a3f63;
+      background: #0c1523;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    #log {
+      margin-top: 10px;
+      height: 120px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0a1322;
+      padding: 8px;
+      font-size: 12px;
+      color: #cde2ff;
+    }
+    #log div { padding: 2px 0; border-bottom: 1px dashed #ffffff17; }
+    #log div:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="title">Zhenyi Whiteboard Demo</div>
+      <label>WS <input id="wsURL" value="ws://127.0.0.1:8011/" /></label>
+      <label>昵称 <input id="nick" value="alice" maxlength="24" /></label>
+      <label>房间 <input id="room" value="demo" maxlength="24" /></label>
+      <label>颜色 <input id="color" type="color" value="#67b8ff" /></label>
+      <label>粗细
+        <select id="width">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <button id="btnConn">连接并加入</button>
+      <button id="btnDisc" class="secondary" disabled>断开</button>
+      <button id="btnClear" class="secondary" disabled>清空白板</button>
+    </div>
+
+    <div class="panel">
+      操作：按住鼠标左键绘制线段（自动广播同房间）；新加入会收到当前房间快照；可开多标签页模拟协作。
+    </div>
+
+    <div id="boardWrap">
+      <canvas id="board" width="980" height="560"></canvas>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <script src="/_shared/web/zhenyi-ws-sdk.js"></script>
+  <script>
+    const MSG_JOIN = 1;
+    const MSG_DRAW = 2;
+    const MSG_CLEAR = 3;
+
+    const board = document.getElementById("board");
+    const ctx = board.getContext("2d");
+    const logEl = document.getElementById("log");
+    const $ = (id) => document.getElementById(id);
+
+    let client = null;
+    let connected = false;
+    let room = "demo";
+    let mySession = 0;
+    let drawing = false;
+    let lastPoint = null;
+
+    function log(s) {
+      const row = document.createElement("div");
+      row.textContent = s;
+      logEl.appendChild(row);
+      while (logEl.childElementCount > 100) logEl.removeChild(logEl.firstChild);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setButtons() {
+      $("btnConn").disabled = connected;
+      $("btnDisc").disabled = !connected;
+      $("btnClear").disabled = !connected;
+    }
+
+    function send(msgId, obj) {
+      if (!client) return;
+      client.sendJson(msgId, obj);
+    }
+
+    function drawStroke(s) {
+      ctx.beginPath();
+      ctx.moveTo(s.x0, s.y0);
+      ctx.lineTo(s.x1, s.y1);
+      ctx.lineWidth = s.width > 0 ? s.width : 2;
+      ctx.strokeStyle = s.color || "#67b8ff";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
+
+    function clearBoard() {
+      ctx.clearRect(0, 0, board.width, board.height);
+    }
+
+    function handleMessage(msgId, payload) {
+      let o;
+      try {
+        o = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      if (o.type === "join_ack") {
+        room = o.room || room;
+        mySession = o.sessionId || 0;
+        clearBoard();
+        for (const s of o.strokes || []) drawStroke(s);
+        log(`加入房间 ${room}，session=${mySession}，快照线段 ${o.strokes?.length || 0}`);
+        return;
+      }
+      if (o.type === "draw_event" && o.stroke) {
+        drawStroke(o.stroke);
+        return;
+      }
+      if (o.type === "clear_event") {
+        clearBoard();
+        log(`白板已清空 by #${o.sessionId || "?"}`);
+        return;
+      }
+      if (o.type === "presence") {
+        const who = o.nickname ? `${o.nickname}#${o.sessionId}` : `#${o.sessionId}`;
+        log(`${who} ${o.action === "join" ? "加入" : "离开"} ${o.room || room}`);
+        return;
+      }
+      log(`msgId=${msgId}: ${payload.slice(0, 120)}`);
+    }
+
+    function connect() {
+      const url = $("wsURL").value.trim();
+      if (!url) return;
+      room = $("room").value.trim() || "demo";
+      const nick = $("nick").value.trim() || "guest";
+      client = new ZhenyiWsClient({
+        onOpen: () => {
+          connected = true;
+          setButtons();
+          send(MSG_JOIN, { room, nickname: nick });
+        },
+        onClose: () => {
+          connected = false;
+          mySession = 0;
+          drawing = false;
+          lastPoint = null;
+          setButtons();
+          log("连接已断开");
+        },
+        onError: () => log("WebSocket 错误"),
+        onPacket: handleMessage
+      });
+      client.connect(url);
+    }
+
+    function pointOfEvent(e) {
+      const rect = board.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    board.addEventListener("pointerdown", (e) => {
+      if (!connected || e.button !== 0) return;
+      drawing = true;
+      lastPoint = pointOfEvent(e);
+      board.setPointerCapture(e.pointerId);
+    });
+
+    board.addEventListener("pointermove", (e) => {
+      if (!drawing || !connected || !lastPoint) return;
+      const p = pointOfEvent(e);
+      const s = {
+        x0: lastPoint.x,
+        y0: lastPoint.y,
+        x1: p.x,
+        y1: p.y,
+        color: $("color").value || "#67b8ff",
+        width: Number($("width").value) || 3
+      };
+      send(MSG_DRAW, s);
+      lastPoint = p;
+    });
+
+    function stopDraw(e) {
+      if (!drawing) return;
+      drawing = false;
+      lastPoint = null;
+      try { board.releasePointerCapture(e.pointerId); } catch {}
+    }
+    board.addEventListener("pointerup", stopDraw);
+    board.addEventListener("pointercancel", stopDraw);
+
+    $("btnConn").onclick = connect;
+    $("btnDisc").onclick = () => client && client.close();
+    $("btnClear").onclick = () => send(MSG_CLEAR, {});
+    setButtons();
+  </script>
+</body>
+</html>

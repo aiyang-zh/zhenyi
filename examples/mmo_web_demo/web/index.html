@@ -317,6 +317,7 @@
     </div>
     <div id="log"></div>
   </div>
+  <script src="/_shared/web/zhenyi-ws-sdk.js"></script>
   <script>
     const MSG_LOGIN = 1;
     const MSG_ENTER = 10;
@@ -327,9 +328,7 @@
     const logEl = document.getElementById("log");
     const $ = (id) => document.getElementById(id);
 
-    let ws = null;
-    let seq = 0;
-    let rxBuf = new Uint8Array(0);
+    let client = null;
     let connected = false;
     let selfId = 0;
     let myPos = { x: 80, y: 80 };
@@ -372,22 +371,9 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function packJson(msgId, obj) {
-      const body = new TextEncoder().encode(JSON.stringify(obj));
-      const buf = new ArrayBuffer(12 + body.length);
-      const dv = new DataView(buf);
-      dv.setInt32(0, msgId, false);
-      dv.setUint32(4, (++seq) >>> 0, false);
-      dv.setUint32(8, body.length, false);
-      new Uint8Array(buf, 12).set(body);
-      return buf;
-    }
-
-    function mergeBuf(a, b) {
-      const out = new Uint8Array(a.length + b.length);
-      out.set(a, 0);
-      out.set(b, a.length);
-      return out;
+    function send(msgId, payload) {
+      if (!client) return;
+      client.sendJson(msgId, payload || {});
     }
 
     function ensurePlayerEl(p) {
@@ -499,33 +485,19 @@
       log(`msgId=${msgId}: ${payload.slice(0, 120)}`);
     }
 
-    function parsePackets(u8) {
-      let off = 0;
-      while (off + 12 <= u8.length) {
-        const dv = new DataView(u8.buffer, u8.byteOffset + off, 12);
-        const msgId = dv.getInt32(0, false);
-        const len = dv.getUint32(8, false);
-        if (len > (1 << 20) || off + 12 + len > u8.length) break;
-        const payload = new TextDecoder().decode(u8.subarray(off + 12, off + 12 + len));
-        handleDown(msgId, payload);
-        off += 12 + len;
-      }
-      return off;
-    }
-
     function sendMove(x, y) {
-      if (!ws || ws.readyState !== 1) return;
+      if (!client || !client.isConnected()) return;
       myPos = {
         x: Math.max(16, Math.min(784, x)),
         y: Math.max(16, Math.min(484, y)),
       };
-      ws.send(packJson(MSG_MOVE, myPos));
+      send(MSG_MOVE, myPos);
       updateAttackRangeRing();
     }
 
     function sendAttack(targetId) {
-      if (!ws || ws.readyState !== 1) return;
-      ws.send(packJson(MSG_ATTACK, { targetId: targetId || 0 }));
+      if (!client || !client.isConnected()) return;
+      send(MSG_ATTACK, { targetId: targetId || 0 });
     }
 
     // 与 #stage 内 .player-root 尺寸一致（width/height，锚点为 translate(-50%,-50%) 的中心）
@@ -544,59 +516,51 @@
       const url = $("wsURL").value.trim();
       const nick = $("nick").value.trim() || "guest";
       room = $("room").value.trim() || "world";
-      ws = new WebSocket(url);
-      ws.binaryType = "arraybuffer";
-      rxBuf = new Uint8Array(0);
-
-      ws.onopen = () => {
-        connected = true;
-        $("btnConn").disabled = true;
-        $("btnDisc").disabled = false;
-        $("nick").disabled = true;
-        $("room").disabled = true;
-        $("wsURL").disabled = true;
-        setStatus();
-        if (respawnTick) clearInterval(respawnTick);
-        respawnTick = setInterval(() => {
-          if (!connected || !lastPlayers.some((p) => p.dead)) return;
-          drawPlayers(lastPlayers.slice());
-        }, 300);
-        ws.send(packJson(MSG_LOGIN, { userId: Date.now() % 1000000, nickname: nick }));
-        ws.send(packJson(MSG_ENTER, { room, nickname: nick }));
-      };
-      ws.onclose = () => {
-        connected = false;
-        if (respawnTick) {
-          clearInterval(respawnTick);
-          respawnTick = null;
-        }
-        $("btnConn").disabled = false;
-        $("btnDisc").disabled = true;
-        $("nick").disabled = false;
-        $("room").disabled = false;
-        $("wsURL").disabled = false;
-        selfId = 0;
-        lastPlayers = [];
-        for (const el of playerEls.values()) el.remove();
-        playerEls.clear();
-        setStatus();
-        log("连接已断开");
-        updateAttackRangeRing();
-      };
-      ws.onerror = () => log("WebSocket 错误");
-      ws.onmessage = (ev) => {
-        if (typeof ev.data === "string") {
-          log(ev.data);
-          return;
-        }
-        rxBuf = mergeBuf(rxBuf, new Uint8Array(ev.data));
-        const used = parsePackets(rxBuf);
-        if (used > 0) rxBuf = rxBuf.subarray(used);
-      };
+      client = new ZhenyiWsClient({
+        onOpen: () => {
+          connected = true;
+          $("btnConn").disabled = true;
+          $("btnDisc").disabled = false;
+          $("nick").disabled = true;
+          $("room").disabled = true;
+          $("wsURL").disabled = true;
+          setStatus();
+          if (respawnTick) clearInterval(respawnTick);
+          respawnTick = setInterval(() => {
+            if (!connected || !lastPlayers.some((p) => p.dead)) return;
+            drawPlayers(lastPlayers.slice());
+          }, 300);
+          send(MSG_LOGIN, { userId: Date.now() % 1000000, nickname: nick });
+          send(MSG_ENTER, { room, nickname: nick });
+        },
+        onClose: () => {
+          connected = false;
+          if (respawnTick) {
+            clearInterval(respawnTick);
+            respawnTick = null;
+          }
+          $("btnConn").disabled = false;
+          $("btnDisc").disabled = true;
+          $("nick").disabled = false;
+          $("room").disabled = false;
+          $("wsURL").disabled = false;
+          selfId = 0;
+          lastPlayers = [];
+          for (const el of playerEls.values()) el.remove();
+          playerEls.clear();
+          setStatus();
+          log("连接已断开");
+          updateAttackRangeRing();
+        },
+        onError: () => log("WebSocket 错误"),
+        onText: (s) => log(s),
+        onPacket: handleDown
+      });
+      client.connect(url);
     }
 
     $("btnConn").onclick = connect;
-    $("btnDisc").onclick = () => ws && ws.close();
+    $("btnDisc").onclick = () => client && client.close();
 
     stage.addEventListener("click", (e) => {
       if (!connected) return;

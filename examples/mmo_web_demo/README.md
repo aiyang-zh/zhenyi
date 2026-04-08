@@ -17,14 +17,13 @@
 go run ./examples/mmo_web_demo -conn ws -addr 127.0.0.1:8001
 ```
 
-再启动一个静态文件服务（任选其一）：
-
-```bash
-python3 -m http.server 8080 -d ./examples/mmo_web_demo/web
-```
-
 浏览器打开：
 
-`http://127.0.0.1:8080/`
+`http://127.0.0.1:8080/mmo_web_demo/web/`
 
 可开多个标签页模拟多玩家。
+
+### 说明
+
+- 示例默认会同时启动静态页面服务（`-web 127.0.0.1:8080`），不依赖 Python。
+- 静态服务默认以 `./examples` 作为根目录（`-webRoot` 可改），以便复用公共前端 SDK：`/_shared/web/zhenyi-ws-sdk.js`。

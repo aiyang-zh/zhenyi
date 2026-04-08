@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
 	"time"
 
 	baseziface "github.com/aiyang-zh/zhenyi-base/ziface"
@@ -392,9 +394,26 @@ func (s *MmoServer) tickRespawn(ctx context.Context, nowTs int64) {
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8001", "gate listen addr")
+	webAddr := flag.String("web", "127.0.0.1:8080", "optional static web server addr, empty to disable")
+	webRoot := flag.String("webRoot", "./examples", "static web root directory (serve /mmo_web_demo/web/ etc.)")
 	connKind := flag.String("conn", "ws", "listen protocol: tcp | ws")
 	reactor := flag.Bool("reactor", false, "enable TCP reactor mode (mac/linux only; takes effect only when -conn=tcp and no TLS)")
 	flag.Parse()
+
+	if *webAddr != "" {
+		if st, err := os.Stat(*webRoot); err != nil || !st.IsDir() {
+			panic(fmt.Sprintf("invalid -webRoot %q: %v", *webRoot, err))
+		}
+		go func() {
+			mux := http.NewServeMux()
+			mux.Handle("/", http.FileServer(http.Dir(*webRoot)))
+			fmt.Printf("mmo_web_demo web server start at http://%s/\n", *webAddr)
+			fmt.Printf("open: http://%s/mmo_web_demo/web/\n", *webAddr)
+			if err := http.ListenAndServe(*webAddr, mux); err != nil {
+				fmt.Printf("mmo_web_demo web server stopped: %v\n", err)
+			}
+		}()
+	}
 
 	connProto := znet.TCP
 	switch *connKind {
