@@ -209,9 +209,17 @@ func main() {
 		go func() {
 			mux := http.NewServeMux()
 			mux.Handle("/", http.FileServer(http.Dir(*webRoot)))
+			srv := &http.Server{
+				Addr:              *webAddr,
+				Handler:           mux,
+				ReadHeaderTimeout: 5 * time.Second,
+				ReadTimeout:       10 * time.Second,
+				WriteTimeout:      30 * time.Second,
+				IdleTimeout:       60 * time.Second,
+			}
 			fmt.Printf("whiteboard web server start at http://%s/\n", *webAddr)
 			fmt.Printf("open: http://%s/collab_whiteboard_demo/web/\n", *webAddr)
-			if err := http.ListenAndServe(*webAddr, mux); err != nil {
+			if err := srv.ListenAndServe(); err != nil {
 				fmt.Printf("whiteboard web server stopped: %v\n", err)
 			}
 		}()

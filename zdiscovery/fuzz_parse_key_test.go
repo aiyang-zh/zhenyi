@@ -49,7 +49,10 @@ func FuzzParseKeyToActorType_NoPanic(f *testing.F) {
 
 		n, err := strconv.ParseUint(expectedKey[idx+1:], 10, 32)
 		wantOk := err == nil
-		wantType := uint32(n)
+		wantType := uint32(0)
+		if wantOk {
+			wantType = uint32(n)
+		}
 
 		gotType, gotOk := parseKeyToActorType(key)
 		if gotOk != wantOk || gotType != wantType {

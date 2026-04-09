@@ -38,3 +38,23 @@ jobs:
       # 无 etcd 的 runner：跳过 zdiscovery 的 etcd 集成测（与本地有 etcd 时仍可 go test ./... 跑通不同）
       - name: Run tests
         run: go test ./... -race -count=3 -skip '^TestIntegration_'
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Run fuzz tests
+        uses: form3tech-oss/go-ci-fuzz/ci/github-actions/fuzz@v0.1.3
+        with:
+          source-path: "."
+          fuzz-time: 3m
+          fail-fast: "false"
+          artifact-name: zhenyi-failing-inputs

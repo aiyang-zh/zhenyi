@@ -5,12 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"runtime"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
-	_ "net/http/pprof"
 
 	"github.com/aiyang-zh/zhenyi-base/zlog"
 	"github.com/aiyang-zh/zhenyi-base/znet"
@@ -185,10 +185,22 @@ func main() {
 	zlog.NewDefaultLoggerWithConfig(logConfig)
 
 	if *pprofAddr != "" {
-		// net/http/pprof handlers are registered on the default ServeMux via blank import.
 		go func() {
 			zlog.CloneDefaultLog("pprof").Info("pprof server started", zap.String("addr", *pprofAddr))
-			_ = http.ListenAndServe(*pprofAddr, nil)
+			mux := http.NewServeMux()
+			mux.HandleFunc("/debug/pprof/", pprof.Index)
+			mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+			mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+			mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+			srv := &http.Server{
+				Addr:              *pprofAddr,
+				Handler:           mux,
+				ReadHeaderTimeout: 5 * time.Second,
+			}
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				zlog.CloneDefaultLog("pprof").Warn("pprof server stopped", zap.Error(err))
+			}
 		}()
 	}
 
