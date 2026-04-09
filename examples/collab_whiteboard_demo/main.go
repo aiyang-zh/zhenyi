@@ -202,6 +202,11 @@ func main() {
 	reactor := flag.Bool("reactor", false, "enable TCP reactor mode (takes effect only when -conn=tcp and no TLS)")
 	flag.Parse()
 
+	// Demo tuning: reduce idle CPU usage in send loop.
+	znet.SetSendLoopTuning(znet.SendLoopTuning{
+		BackoffSleep: time.Millisecond,
+	})
+
 	if *webAddr != "" {
 		if st, err := os.Stat(*webRoot); err != nil || !st.IsDir() {
 			panic(fmt.Sprintf("invalid -webRoot %q: %v", *webRoot, err))
