@@ -1,16 +1,16 @@
-# zhenyi Commercial License (TBD)
+# zhenyi Commercial Licensing
 
 This document explains the commercial licensing information for `zhenyi` and provides complete guidance for **network services provided to external parties** (see the "License" section in the root README.md for the summary).
 
 ## Current Status
 
 - `zhenyi` uses **AGPL-3.0 + Commercial Dual License** model.
-- Specific commercial license terms (license scope, billing approach, support level, SLA, duration and renewal, etc.) **are currently TBD**.
+- Commercial terms can be discussed per project, including license scope, billing model, support level, SLA, term and renewal.
 
 ## Notes
 
 - Before formal terms are published, open source use must comply with AGPL-3.0 requirements in `LICENSE`.
-- Commercial licensing is subject to formal contracts/terms released by the Project Owner.
+- Commercial licensing is subject to formal contracts/terms signed by both parties.
 - AGPL-3.0 applies only when no commercial license agreement is signed.
 - Free to use if willing to comply with AGPL-3.0 (including corresponding source code supply obligations); contact for commercial license if you don't want to fulfill AGPL obligations.
 
@@ -25,3 +25,4 @@ Any use of `zhenyi` via Go `import` in your build artifacts to provide network-a
 ## Contact
 
 - Email: `1093993119@qq.com`
+- Recommended details: project scenario, deployment scale, closed-source needs, and expected support scope.
