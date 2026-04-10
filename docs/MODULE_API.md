@@ -5,6 +5,8 @@
 ## 1. 启动与编排
 
 - `zstartup`：应用启动编排、Actor 工厂注册
+  - 常用：`NewApp`、`RegisterActorFactory`、`Run`
+  - 生命周期：通过 `App` 的统一 shutdown 路径调用 `IGroup.Close(ctx)`
 - `zcheck`：启动前依赖自检（bus/nats/metrics 等）
 
 ## 2. 网关与网络入口
@@ -20,6 +22,7 @@
 - `zmodel`：`ActorConfig`、`ActorCmd`、框架调优配置
 - `zmsg`：消息结构体与对象池（`GetMessage/Retain/Release`）
 - `ziface`：核心接口定义（跨模块契约）
+  - `IGroup` 生命周期：`Run(ctx)`、`Close(ctx)`（统一关闭入口）
 
 ## 4. 路由、发现、总线
 

@@ -5,6 +5,8 @@ This document provides module-level API entry index to help quickly locate "wher
 ## 1. Startup & Orchestration
 
 - `zstartup`: Application startup orchestration, Actor factory registration
+  - Common: `NewApp`, `RegisterActorFactory`, `Run`
+  - Lifecycle: `App` uses a unified shutdown path that calls `IGroup.Close(ctx)`
 - `zcheck`: Pre-startup dependency self-check (bus/nats/metrics, etc.)
 
 ## 2. Gateway & Network Entry
@@ -20,6 +22,7 @@ This document provides module-level API entry index to help quickly locate "wher
 - `zmodel`: `ActorConfig`, `ActorCmd`, framework tuning configuration
 - `zmsg`: Message struct and object pool (`GetMessage/Retain/Release`)
 - `ziface`: Core interface definitions (cross-module contracts)
+  - `IGroup` lifecycle: `Run(ctx)` and `Close(ctx)` (single close entry)
 
 ## 4. Routing, Discovery, Bus
 
