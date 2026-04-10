@@ -193,7 +193,7 @@ func (g *fakeGroup) GetScriptEngine(engineType ziface.ScriptEngineType) ziface.I
 	_ = engineType
 	return nil
 }
-func (g *fakeGroup) CloseScriptEngines() {}
+func (g *fakeGroup) Close(ctx context.Context) error { _ = ctx; return nil }
 
 type reverseOrderStrategy struct{}
 

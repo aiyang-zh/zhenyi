@@ -669,6 +669,10 @@ func (s *Server) sendClient(msg *zmsg.Message) {
 					s.metrics.RecordRTT(rtt)
 				}
 			}
+		} else {
+			s.GetLogger().Debug("sendClient: channel not found (session likely closed)",
+				zap.Int32("msgId", msg.MsgId),
+				zap.Uint64("sessionId", msg.SessionId))
 		}
 	}
 }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2026-04-10
+
+### Changed
+
+- **zactor/group**：`Group.Run` 启动流程改为“失败返回错误 + 回滚已成功 Actor（Close + Unregister）”，不再在初始化失败时直接 `Fatal` 退出；并将 `watchActor` 启动时机后移到全部本地 Actor 启动成功之后。
+- **zactor**：`Actor.Close` 的 `mailBoxQueue.Close` 与 `workerPool.Release` 移入 `closeOnce`，重复关闭路径更安全。
+- **zstartup**：`App.Run` 收敛为统一且幂等的 shutdown 路径（信号退出与启动失败共用）；启动失败时也会执行 best-effort 清理。
+- **ziface**：`IGroup` 收敛为统一关闭入口 `Close(ctx)`；不再暴露 `CloseScriptEngines` 等实现细节方法。
+- **zdiscovery/noop**：`Watch` channel 改为带缓冲，降低误用写入时发送方阻塞风险（noop 语义保持不变）。
+- **zgate**：补充 `sendClient` 在连接已关闭竞态下的 debug 日志，便于排障。
+
 ## 2026-04-03
 
 ### Added

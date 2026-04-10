@@ -13,7 +13,8 @@ var _ ziface.Discoverer = (*NoopDiscovery)(nil)
 // Register/Unregister 无操作，Find* 返回零值，Watch 返回不会关闭的空 channel。
 func NewNoopDiscovery() *NoopDiscovery {
 	return &NoopDiscovery{
-		ch: make(chan zmodel.ActorConfig),
+		// 带缓冲：避免误向 Watch 写入时永久阻塞发送方（单机 noop 语义不变）。
+		ch: make(chan zmodel.ActorConfig, 1),
 	}
 }
 

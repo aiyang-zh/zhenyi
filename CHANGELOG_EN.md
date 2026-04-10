@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## 2026-04-10
+
+### Changed
+
+- **zactor/group**: `Group.Run` now uses "return error + rollback successful actors (Close + Unregister)" on startup failure, instead of `Fatal` exit; `watchActor` is started only after all local actors are initialized successfully.
+- **zactor**: move `mailBoxQueue.Close` and `workerPool.Release` into `closeOnce` in `Actor.Close`, making repeated-close paths safer.
+- **zstartup**: `App.Run` now uses a unified, idempotent shutdown path (shared by signal shutdown and startup-failure cleanup).
+- **ziface**: `IGroup` now exposes a single lifecycle close entry `Close(ctx)` and no longer leaks implementation-detail methods such as `CloseScriptEngines`.
+- **zdiscovery/noop**: make `Watch` channel buffered to reduce sender-side blocking risk under misuse (noop semantics unchanged).
+- **zgate**: add debug logs in `sendClient` for "channel already closed" race cases to improve diagnostics.
 
 ## 2026-04-03
 

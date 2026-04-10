@@ -52,6 +52,8 @@ type Group struct {
 	otherRouteSnapshot atomic.Value // *otherRouteTableSnapshot
 
 	watchdog *Watchdog
+
+	closeOnce sync.Once
 }
 
 type otherRouteTableSnapshot struct {
@@ -255,29 +257,96 @@ func (g *Group) Run(ctx context.Context) error {
 			g.watchdog.run(ctx)
 		}()
 	}
-	go g.watchActor(ctx)
+
+	actorItems := make([]*ActorItem, 0)
 	g.actors.Range(func(actorId uint64, item *ActorItem) bool {
-		// 将本进程内 Actor 注册到发现服务，并附上其支持的 msgId 列表
+		actorItems = append(actorItems, item)
+		return true
+	})
+	sort.Slice(actorItems, func(i, j int) bool {
+		return actorItems[i].IActor.GetActorId() < actorItems[j].IActor.GetActorId()
+	})
+
+	var succeeded []*ActorItem
+	for _, item := range actorItems {
+		actorId := item.IActor.GetActorId()
 		g.registerActor(item)
 		if err := item.IActor.Init(ctx); err != nil {
-			zlog.Fatal("Actor init failed, shutting down",
+			zlog.Error("Actor init failed, rolling back",
 				zap.Uint64("actorId", actorId),
 				zap.String("actorName", item.GetNameTopic()),
 				zap.Error(zerrs.Wrap(err, zerrs.ErrTypeInternal, "actor init failed")))
+			g.rollbackRunInit(ctx, succeeded, item, true)
+			return zerrs.Wrap(err, zerrs.ErrTypeInternal, "actor init failed")
 		}
 		if serverActor, ok := item.IActor.(ziface.IServerActor); ok {
 			if err := serverActor.RunServer(ctx); err != nil {
-				zlog.Fatal("Actor server start failed, shutting down",
+				zlog.Error("Actor server start failed, rolling back",
 					zap.Uint64("actorId", actorId),
 					zap.String("actorName", item.GetNameTopic()),
 					zap.Error(zerrs.Wrap(err, zerrs.ErrTypeInternal, "actor server initialization failed")))
+				g.rollbackRunInit(ctx, succeeded, item, false)
+				return zerrs.Wrap(err, zerrs.ErrTypeInternal, "actor server initialization failed")
 			}
 		}
 		item.IActor.GetLogger().Info("actor run success", zap.String("actor name", item.GetNameTopic()))
-		return true
-	})
+		succeeded = append(succeeded, item)
+	}
+
+	// Start discoverer watch only after all local actors are successfully initialized.
+	// 仅在本地 Actor 全部启动成功后再开启 watch，避免失败回滚时残留后台 goroutine。
+	go g.watchActor(ctx)
+
 	g.StartWorkers(ctx)
 	g.tick(ctx)
+	return nil
+}
+
+func (g *Group) rollbackRunInit(ctx context.Context, succeeded []*ActorItem, failed *ActorItem, initFailed bool) {
+	closeCtx := ctx
+	for i := len(succeeded) - 1; i >= 0; i-- {
+		item := succeeded[i]
+		if item != nil && item.IActor != nil {
+			_ = item.IActor.Close(closeCtx)
+		}
+		g.unregisterActor(item)
+	}
+	if failed != nil && failed.IActor != nil {
+		if !initFailed {
+			_ = failed.IActor.Close(closeCtx)
+		}
+		g.unregisterActor(failed)
+	}
+}
+
+func (g *Group) unregisterActor(item *ActorItem) {
+	if g.discoverer == nil || item == nil {
+		return
+	}
+	cfg := item.GetActorConfig()
+	if err := g.discoverer.Unregister(cfg); err != nil {
+		zlog.Error("Failed to unregister actor from discoverer",
+			zap.Uint64("actorId", cfg.Id),
+			zap.Uint32("actorType", cfg.ActorType),
+			zap.Error(err))
+	}
+}
+
+// Close gracefully closes script engines and all local actors (best-effort).
+// Close 优雅关闭脚本引擎与本组全部 Actor（尽力而为）。
+func (g *Group) Close(ctx context.Context) error {
+	g.closeOnce.Do(func() {
+		// Close actors first to avoid breaking in-flight script calls.
+		// Actor 先关：避免 handler 仍在执行脚本时先关闭引擎导致异常。
+		g.actors.Range(func(_ uint64, item *ActorItem) bool {
+			if item != nil && item.IActor != nil {
+				_ = item.IActor.Close(ctx)
+			}
+			return true
+		})
+		// Then close engines to release VM resources.
+		g.CloseScriptEngines()
+	})
 	return nil
 }
 
@@ -343,24 +412,6 @@ func (g *Group) superviseActor(ctx context.Context, actor ziface.IActor) {
 			backoff = 30 * time.Second
 		}
 		time.Sleep(backoff)
-	}
-}
-
-// WaitForDrain waits until all actor goroutines exit or timeout occurs.
-// WaitForDrain 等待所有 Actor goroutine 排空退出，超时则返回 false。
-func (g *Group) WaitForDrain(timeout time.Duration) bool {
-	done := make(chan struct{})
-	go func() {
-		g.wg.Wait()
-		close(done)
-	}()
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	select {
-	case <-done:
-		return true
-	case <-timer.C:
-		return false
 	}
 }
 

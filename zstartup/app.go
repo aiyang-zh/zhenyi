@@ -8,6 +8,9 @@ package zstartup
 import (
 	"context"
 	"fmt"
+	"github.com/aiyang-zh/zhenyi-base/zlog"
+	"sync"
+
 	"github.com/aiyang-zh/zhenyi-base/zerrs"
 	"github.com/aiyang-zh/zhenyi-base/zgrace"
 	"github.com/aiyang-zh/zhenyi-base/znet"
@@ -27,6 +30,8 @@ type App struct {
 	Ctx            context.Context
 	Grace          *zgrace.Grace
 	Group          ziface.IGroup
+	stopCancel     context.CancelFunc
+	shutdownOnce   sync.Once
 	actorFactories map[uint32]ActorFactory
 	AppConfig
 }
@@ -44,14 +49,17 @@ type AppConfig struct {
 // NewApp creates an App with a new Group.
 // NewApp 创建 App，并初始化一个新的 Group。
 func NewApp(ctx context.Context, cfg AppConfig) *App {
+	runCtx, cancel := context.WithCancel(ctx)
 	g := zactor.NewGroup(cfg.Process, cfg.IsSingle)
 	app := &App{
-		Ctx:            ctx,
+		Ctx:            runCtx,
+		stopCancel:     cancel,
 		Group:          g,
 		AppConfig:      cfg,
 		Grace:          zgrace.New(),
 		actorFactories: make(map[uint32]ActorFactory),
 	}
+	app.Grace.SetContext(runCtx)
 	return app
 }
 
@@ -62,12 +70,26 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
+	a.Grace.Register(func(shutdownCtx context.Context) { a.shutdown("app shutdown") })
 	err = a.Group.Run(a.Ctx)
 	if err != nil {
+		// If startup fails, Grace.Wait() won't run, so proactively do best-effort cleanup here.
+		a.shutdown("app startup failed")
 		return err
 	}
 	a.Grace.Wait()
 	return nil
+}
+
+func (a *App) shutdown(reason string) {
+	a.shutdownOnce.Do(func() {
+		if a.stopCancel != nil {
+			a.stopCancel()
+		}
+		if err := a.Group.Close(a.Ctx); err != nil {
+			zlog.Warn(reason+": group close returned error", zap.Error(err))
+		}
+	})
 }
 
 func (a *App) initActors() error {

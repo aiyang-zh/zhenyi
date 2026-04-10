@@ -360,15 +360,14 @@ func (a *Actor) Close(ctx context.Context) error {
 			}
 		}
 		close(a.closeCh)
+		if a.mailBoxQueue != nil {
+			a.mailBoxQueue.Close()
+		}
+		if a.workerPool != nil {
+			a.workerPool.Release()
+			a.GetLogger().Info("Actor worker pool released")
+		}
 	})
-
-	if a.mailBoxQueue != nil {
-		a.mailBoxQueue.Close()
-	}
-	if a.workerPool != nil {
-		a.workerPool.Release()
-		a.GetLogger().Info("Actor worker pool released")
-	}
 	return nil
 }
 

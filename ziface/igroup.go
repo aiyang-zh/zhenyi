@@ -53,6 +53,9 @@ type IGroup interface {
 	GetActorById(actorId uint64) IActor
 	GetOtherActorById(actorId uint64) (zmodel.ActorConfig, bool)
 	Run(ctx context.Context) error
+	// Close gracefully shuts down the group and all actors (best-effort).
+	// Close 统一关闭入口：尽力优雅关闭 Group 与其下全部 Actor。
+	Close(ctx context.Context) error
 	GetDiscoverer() Discoverer
 	SetDiscoverer(discover Discoverer)
 	IsSingle() bool
@@ -70,7 +73,6 @@ type IGroup interface {
 	// Script engine management (use ScriptEngineType constants).
 	// 脚本引擎管理（使用 ScriptEngineType 常量，如 ziface.ScriptEngineLua）。
 	GetScriptEngine(engineType ScriptEngineType) IScriptEngine
-	CloseScriptEngines()
 }
 
 // IGroupRouteTableView is an optional IGroup extension for zero-allocation local route lookup.
