@@ -107,6 +107,38 @@ func TestCircuitBreaker_GetCircuitBreaker(t *testing.T) {
 	}
 }
 
+func TestActor_CallActorAll_SubmitFailDoesNotBlock(t *testing.T) {
+	a := newTestActor()
+	defer a.Close(context.Background())
+
+	// Force submit failures.
+	a.workerPool.Release()
+
+	specs := []ziface.RpcCallSpec{
+		{ActorID: 1, Request: &dummyVT{msgID: 100, buf: []byte("req")}, Reply: &dummyVT{msgID: 101}},
+		{ActorID: 2, Request: &dummyVT{msgID: 100, buf: []byte("req2")}, Reply: &dummyVT{msgID: 101}},
+	}
+
+	done := make(chan []ziface.RpcReply, 1)
+	go func() {
+		done <- a.CallActorAll(specs, 10*time.Millisecond)
+	}()
+
+	select {
+	case out := <-done:
+		if len(out) != len(specs) {
+			t.Fatalf("expected %d replies, got %d", len(specs), len(out))
+		}
+		for i := range out {
+			if out[i].Code != ziface.ErrorCode_RpcErr {
+				t.Fatalf("reply[%d] expected rpc err, got code=%d msg=%q", i, out[i].Code, out[i].Msg)
+			}
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Fatal("CallActorAll blocked when AsyncRun submission failed")
+	}
+}
+
 // ============================================================
 // handleMessage routing
 // ============================================================
@@ -903,6 +935,75 @@ func TestAsyncRunWithMsg_ValidatorFails(t *testing.T) {
 	if callbackCalled {
 		t.Fatal("callback should not be called when validator fails")
 	}
+}
+
+func TestAsyncRunWithMsgResult_ValidatorFails(t *testing.T) {
+	a := newTestActor()
+	defer a.Close(context.Background())
+
+	msg := zmsg.GetMessage()
+	msg.MsgId = 1
+
+	callbackCalled := false
+	ok := a.AsyncRunWithMsgResult(msg, func(m *zmsg.Message) interface{} {
+		t.Fatal("work function should not run when validator fails")
+		return nil
+	}, func(interface{}) {
+		callbackCalled = true
+	}, func() bool { return false })
+	if ok {
+		t.Fatal("expected submit=false when validator fails")
+	}
+	time.Sleep(20 * time.Millisecond)
+	if callbackCalled {
+		t.Fatal("callback should not run when validator fails")
+	}
+}
+
+func TestAsyncRunWithMsgResult_SubmitFailReleasesMsg(t *testing.T) {
+	a := newTestActor()
+	defer a.Close(context.Background())
+
+	// Force submit failure path.
+	a.workerPool.Release()
+
+	msg := zmsg.GetMessage()
+	msg.MsgId = 1
+	before := msg.LoadRefCount()
+	ok := a.AsyncRunWithMsgResult(msg, func(m *zmsg.Message) interface{} {
+		return nil
+	}, nil)
+	if ok {
+		t.Fatal("expected submit=false when workerPool submission fails")
+	}
+	after := msg.LoadRefCount()
+	if after != before {
+		t.Fatalf("message refcount should be balanced on submit fail, before=%d after=%d", before, after)
+	}
+	msg.Release()
+}
+
+func TestStartAsyncThen_WorkPanic_ReleasesMsg(t *testing.T) {
+	a := newTestActor()
+	defer a.Close(context.Background())
+
+	msg := zmsg.GetMessage()
+	msg.MsgId = 1
+	before := msg.LoadRefCount()
+
+	ok := a.StartAsyncThen(msg, func(m *zmsg.Message) (interface{}, error) {
+		panic("boom")
+	}, nil)
+	if !ok {
+		t.Fatal("expected submit=true")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	after := msg.LoadRefCount()
+	if after != before {
+		t.Fatalf("message refcount should be balanced when work panics, before=%d after=%d", before, after)
+	}
+	msg.Release()
 }
 
 func TestAsyncRun_WithCallback(t *testing.T) {

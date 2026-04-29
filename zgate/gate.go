@@ -72,6 +72,8 @@ type Server struct {
 	// useSharedSendWorkerMode enables shared send workers on underlying net server.
 	// useSharedSendWorkerMode 开启底层共享写 worker 模式（默认关闭，保持历史行为）。
 	useSharedSendWorkerMode bool
+	// gateMonitorLogEnabled controls periodic "[Gate Monitor]" logs for this server instance.
+	gateMonitorLogEnabled bool
 }
 
 // NewServer creates a gateway server actor with given actor config and connection protocol.
@@ -88,10 +90,19 @@ func NewServer(actorConfig zmodel.ActorConfig, connType znet.ConnProtocol) *Serv
 		remoteStrategy: zroute.FirstCandidateStrategy{},
 		// Initialize with small capacity and grow/reuse based on load.
 		// 远程候选复用缓冲：初始给小容量，后续按负载按需扩容并复用。
-		remoteCandidatesBuf: make([]zmodel.ActorConfig, 0, 8),
+		remoteCandidatesBuf:   make([]zmodel.ActorConfig, 0, 8),
+		gateMonitorLogEnabled: true,
 	}
 	s.SetIActor(s)
 	return s
+}
+
+// SetGateMonitorLogEnabled enables/disables periodic "[Gate Monitor]" log output for this server instance.
+func (s *Server) SetGateMonitorLogEnabled(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.gateMonitorLogEnabled = enabled
 }
 
 // SetRemoteRouteStrategy sets remote actor picking strategy.
@@ -907,37 +918,39 @@ func (s *Server) ReportMetrics(ctx context.Context) {
 				zmetrics.GateRTTAvg.Observe(float64(sample) / 1e6) // ns → ms
 			}
 
-			// --- F. 打印日志 ---
-			s.GetLogger().Info("[Gate Monitor]",
-				// --- QPS 组 ---
-				zap.Float64("QPS_Curr", currTotalQPS),
-				zap.Float64("QPS_Global", globalQPS),
+			// --- F. 打印日志（可通过 SetGateMonitorLogEnabled 关闭） ---
+			if s.gateMonitorLogEnabled {
+				s.GetLogger().Info("[Gate Monitor]",
+					// --- QPS 组 ---
+					zap.Float64("QPS_Curr", currTotalQPS),
+					zap.Float64("QPS_Global", globalQPS),
 
-				// --- RTT 瞬时组 ---
-				zap.Int("RTT_Samples", rttStats.Count),
-				zap.Duration("RTT_Avg", rttStats.Avg),
-				zap.Duration("RTT_P50", rttStats.P50),
-				zap.Duration("RTT_P99", rttStats.P99),
-				zap.Duration("RTT_Max", rttStats.Max),
+					// --- RTT 瞬时组 ---
+					zap.Int("RTT_Samples", rttStats.Count),
+					zap.Duration("RTT_Avg", rttStats.Avg),
+					zap.Duration("RTT_P50", rttStats.P50),
+					zap.Duration("RTT_P99", rttStats.P99),
+					zap.Duration("RTT_Max", rttStats.Max),
 
-				// --- RTT 全局组 ---
-				zap.Duration("RTT_Global_Avg", globalAvgRTT),
-				zap.Int64("RTT_Total_Count", globalTotalCount),
+					// --- RTT 全局组 ---
+					zap.Duration("RTT_Global_Avg", globalAvgRTT),
+					zap.Int64("RTT_Total_Count", globalTotalCount),
 
-				// --- 系统资源 (CPU/MEM/GC) ---
-				zap.Float64("Mem_Alloc_MB", memAllocMB),
-				zap.Float64("Mem_Sys_MB", memSysMB),
-				zap.Float64("Alloc_Rate_MB", allocRateMB),
+					// --- 系统资源 (CPU/MEM/GC) ---
+					zap.Float64("Mem_Alloc_MB", memAllocMB),
+					zap.Float64("Mem_Sys_MB", memSysMB),
+					zap.Float64("Alloc_Rate_MB", allocRateMB),
 
-				zap.Int("GC_Count", deltaGC),
-				zap.Duration("GC_Pause_Avg", avgPause),
-				zap.Float64("GC_Pause_Total_ms", float64(deltaPauseNs)/1e6),
+					zap.Int("GC_Count", deltaGC),
+					zap.Duration("GC_Pause_Avg", avgPause),
+					zap.Float64("GC_Pause_Total_ms", float64(deltaPauseNs)/1e6),
 
-				// --- 基础信息 ---
-				zap.Int32("Online", onlineCount),
-				zap.Int("Goroutines", runtime.NumGoroutine()),
-				zap.Float64("Run_Sec", activeSeconds),
-			)
+					// --- 基础信息 ---
+					zap.Int32("Online", onlineCount),
+					zap.Int("Goroutines", runtime.NumGoroutine()),
+					zap.Float64("Run_Sec", activeSeconds),
+				)
+			}
 		}
 	}
 }

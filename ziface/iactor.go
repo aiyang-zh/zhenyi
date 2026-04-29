@@ -18,12 +18,29 @@ type IActorConfig interface {
 	GetActorType() uint32
 }
 
+// RpcCallSpec describes one CallActor invocation; Reply MUST be an independent instance
+// (do not share the same Reply pointer across multiple specs).
+// RpcCallSpec 描述一次 CallActor；Reply 必须为**独立实例**（不可多个 spec 共用同一 Reply 指针）。
+type RpcCallSpec struct {
+	ActorID uint64
+	Request IMessage
+	Reply   IMessage
+}
+
 // ISendMsg defines outbound messaging capabilities of an Actor.
 // ISendMsg 定义 Actor 对外消息发送能力。
 type ISendMsg interface {
 	SendMsg(msg *zmsg.Message)
 	SendActor(actorId uint64, msg IMessage)
 	CallActor(actorId uint64, request IMessage, reply IMessage, timeout time.Duration) RpcReply
+	// CallActorAll concurrently issues multi-way RPC calls and blocks until all return (or each times out);
+	// the result indices match the input specs.
+	// Note: DO NOT call this in the current Actor mailbox thread and block-wait, otherwise callbacks may need
+	// mailbox delivery and can deadlock. Use non-mailbox goroutines (e.g., inside AsyncRun) instead.
+	//
+	// CallActorAll 并发发起多路 RPC，阻塞至全部返回（或各自超时）；结果下标与 specs 一致。
+	// 注意：不要在本 Actor 邮箱线程中阻塞等待，否则回调投递可能造成自锁；应在非邮箱线程（例如 AsyncRun 的工作协程）调用。
+	CallActorAll(specs []RpcCallSpec, timeout time.Duration) []RpcReply
 	SendActorReply(msg *zmsg.Message, reply IMessage)
 	Broadcast(topic string, msg IMessage) error
 }

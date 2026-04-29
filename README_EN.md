@@ -21,6 +21,7 @@
 ## Introduction
 
 zhenyi builds on **zhenyi-base** with an Actor runtime, unified gateway (TCP/WebSocket/KCP), cross-process bus & discovery, metrics and tracing for long-lived connections and real-time backends. For the module map and architecture, see the **[documentation index](docs/DOCS_INDEX_EN.md)** (large tables are maintained there, not here).
+Under same-host benchmarking on `2 vCPU / 4 GiB`, two measured profiles are validated: **~40k QPS over a 7-day steady run (P99 ~1-2ms)** and **~166k QPS in a 1-hour high-pressure run**; see the **[benchmark report](docs/BENCHMARK_EN.md)**.
 
 ## Highlights
 
@@ -50,6 +51,7 @@ The single-process demo **does not** require Etcd/NATS; multi-process examples (
 | Beginner's guide | [BEGINNER_GUIDE_EN.md](docs/BEGINNER_GUIDE_EN.md) |
 | Architecture | [ARCHITECTURE_EN.md](docs/ARCHITECTURE_EN.md) |
 | Module API | [MODULE_API_EN.md](docs/MODULE_API_EN.md) |
+| Benchmark report | [BENCHMARK_EN.md](docs/BENCHMARK_EN.md) |
 | Xinchuang | [XINCHUANG_EN.md](docs/XINCHUANG_EN.md) |
 | Book (aligned with code) | [go-actor-realtime](docs/books/go-actor-realtime/README.md) |
 

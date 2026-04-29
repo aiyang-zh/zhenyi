@@ -84,6 +84,10 @@ func NewActor(actorConfig zmodel.ActorConfig) *Actor {
 			if task == nil {
 				return
 			}
+			if task.flowWork != nil {
+				task.runFlow()
+				return
+			}
 			if task.msg != nil && task.fMsg != nil {
 				task.runWithMsg()
 				return

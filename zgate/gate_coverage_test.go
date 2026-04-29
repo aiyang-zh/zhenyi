@@ -336,6 +336,26 @@ func TestGate_ServerCoreBranches(t *testing.T) {
 	s.ReportMetrics(cctx)
 }
 
+func TestGate_SetGateMonitorLogEnabled(t *testing.T) {
+	cfg := zmodel.ActorConfig{Id: 1, ActorType: 2, Addr: "127.0.0.1:0"}
+	s := NewServer(cfg, 0)
+	if !s.gateMonitorLogEnabled {
+		t.Fatal("expected gateMonitorLogEnabled default true")
+	}
+	s.SetGateMonitorLogEnabled(false)
+	if s.gateMonitorLogEnabled {
+		t.Fatal("expected gateMonitorLogEnabled false after disable")
+	}
+	s.SetGateMonitorLogEnabled(true)
+	if !s.gateMonitorLogEnabled {
+		t.Fatal("expected gateMonitorLogEnabled true after enable")
+	}
+
+	var nilServer *Server
+	// nil receiver should be no-op and not panic.
+	nilServer.SetGateMonitorLogEnabled(false)
+}
+
 func TestGate_RunServer_CanceledContext(t *testing.T) {
 	cfg := zmodel.ActorConfig{Id: 1, ActorType: 2}
 	s := NewServer(cfg, 0)

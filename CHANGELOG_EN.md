@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2026-04-30
+
+### Changed
+
+- **zactor**: add `StartAsyncThen` (zero-Promise fast path: worker execution + Actor-thread write-back).
+- **zactor**: add `AsyncRunResult` / `AsyncRunWithMsgResult` return semantics so callers can explicitly handle submission failures.
+- **zactor**: add `CallActorAll` for concurrent fan-out calls; on submit failure, return `RpcErr` immediately to avoid blocking waits.
+- **zgate**: add `SetGateMonitorLogEnabled` for per-instance `[Gate Monitor]` periodic log toggling (default enabled, backward compatible).
+- **zstartup**: enable `Grace.EnableSignalNotify` earlier in `NewApp` to reduce startup-window signal races.
+- **Dependencies**: bump `github.com/aiyang-zh/zhenyi-base` to `v1.1.2` (with `go.mod`/`go.sum` sync).
+
+### Documentation
+
+- **Benchmark docs**: add `docs/BENCHMARK.md` and `docs/BENCHMARK_EN.md`, consolidating the 7-day steady and 1-hour high-pressure benchmark conclusions.
+- **Benchmark artifacts**: move raw benchmark logs/screenshots to `zhenyi-site/docs/bench/` (scenario directories + `logs.zip`), and update repo docs to reference the archive paths.
+- **README navigation**: add benchmark doc entries in `README.md` / `README_EN.md` (`docs/BENCHMARK.md` / `docs/BENCHMARK_EN.md`).
+
+### Added
+
+- **zactor**: add `zactor/flow.go` and `zactor/flow_test.go` to cover `StartAsyncThen` behavior and callback-thread semantics.
+
+### Tests
+
+- **zactor**: add submit-fail / validator-fail path tests (`CallActorAll`, `AsyncRunWithMsgResult`), including refcount and non-blocking guarantees.
+- **zgate**: add coverage for `SetGateMonitorLogEnabled`, including switch behavior and nil receiver safety.
+
 ## 2026-04-10
 
 ### Changed

@@ -24,6 +24,10 @@ type asyncTask struct {
 	fSimple      func() interface{}              // Used by AsyncRun / AsyncRun 用
 	callBackFunc func(interface{})
 	result       interface{}
+	flowWork     func(*zmsg.Message) (interface{}, error) // Used by StartAsyncThen / StartAsyncThen 用
+	flowThen     func(*Actor, interface{}, error)
+	flowVal      interface{}
+	flowErr      error
 	validators   []func() bool
 }
 
@@ -52,6 +56,10 @@ func putAsyncTask(t *asyncTask) {
 	t.fSimple = nil
 	t.callBackFunc = nil
 	t.result = nil
+	t.flowWork = nil
+	t.flowThen = nil
+	t.flowVal = nil
+	t.flowErr = nil
 	t.validators = t.validators[:0]
 	initAsyncTaskPool()
 	asyncTaskPool.Put(t)
@@ -86,9 +94,42 @@ func (t *asyncTask) runSimple() {
 	}
 }
 
+func (t *asyncTask) runFlow() {
+	defer func() {
+		if r := recover(); r != nil {
+			t.actor.GetLogger().Error("Actor StartAsyncThen panic recovered", zap.Any("panic", r))
+			if t.msg != nil {
+				t.msg.Release()
+			}
+			putAsyncTask(t)
+		}
+	}()
+
+	t.flowVal, t.flowErr = t.flowWork(t.msg)
+
+	if t.flowThen != nil {
+		t.actor.Push(zmodel.ActorCmd{Type: zmodel.CmdTypeAsync, Any: t})
+	} else {
+		if t.msg != nil {
+			t.msg.Release()
+		}
+		putAsyncTask(t)
+	}
+}
+
 func (t *asyncTask) runCallbackOnActor() {
 	a := t.actor
 	if a == nil {
+		putAsyncTask(t)
+		return
+	}
+	if t.flowWork != nil {
+		if t.msg != nil {
+			defer t.msg.Release()
+		}
+		if t.flowThen != nil {
+			t.flowThen(a, t.flowVal, t.flowErr)
+		}
 		putAsyncTask(t)
 		return
 	}
@@ -189,6 +230,14 @@ func (t *asyncTask) runCallbackOnActor() {
 //  5. do not access Actor data inside `f` (since `f` runs in another goroutine). / 不要在 f 函数中访问 Actor 的数据（f 在另一个 goroutine 执行）
 //  6. validator and callBackFunc run on the Actor main thread, so it is safe to access Actor data. / validator 和 callBackFunc 都在 Actor 主线程执行，可以安全访问 Actor 数据
 func (a *Actor) AsyncRunWithMsg(msg *zmsg.Message, f func(*zmsg.Message) interface{}, callBackFunc func(interface{}), validators ...func() bool) {
+	_ = a.AsyncRunWithMsgResult(msg, f, callBackFunc, validators...)
+}
+
+// AsyncRunWithMsgResult behaves like AsyncRunWithMsg but returns whether task submission succeeded.
+// If false, the task was NOT submitted into workerPool (typically pool full/closed) and caller may do fallback.
+// AsyncRunWithMsgResult 与 AsyncRunWithMsg 行为一致，但会返回任务是否成功提交到 workerPool。
+// 返回 false 表示任务未提交到 workerPool（通常是池满/关闭），调用方可做兜底处理。
+func (a *Actor) AsyncRunWithMsgResult(msg *zmsg.Message, f func(*zmsg.Message) interface{}, callBackFunc func(interface{}), validators ...func() bool) bool {
 	msg.Retain()
 
 	for i, validator := range validators {
@@ -198,7 +247,7 @@ func (a *Actor) AsyncRunWithMsg(msg *zmsg.Message, f func(*zmsg.Message) interfa
 				zap.Uint64("traceIdHi", msg.TraceIdHi),
 				zap.Int32("msgId", msg.MsgId))
 			msg.Release()
-			return
+			return false
 		}
 	}
 
@@ -222,12 +271,22 @@ func (a *Actor) AsyncRunWithMsg(msg *zmsg.Message, f func(*zmsg.Message) interfa
 			zap.Int32("msgId", msg.MsgId))
 		msg.Release()
 		putAsyncTask(task)
+		return false
 	}
+	return true
 }
 
 // AsyncRun is a safe async executor with pooled tasks.
 // AsyncRun 安全的异步执行器（池化 task，避免闭包分配）。
 func (a *Actor) AsyncRun(f func() interface{}, callBackFunc func(interface{}), validators ...func() bool) {
+	_ = a.AsyncRunResult(f, callBackFunc, validators...)
+}
+
+// AsyncRunResult behaves like AsyncRun but returns whether task submission succeeded.
+// If false, the task was NOT submitted into workerPool (typically pool full/closed) and caller may do fallback.
+// AsyncRunResult 与 AsyncRun 行为一致，但会返回任务是否成功提交到 workerPool。
+// 返回 false 表示任务未提交到 workerPool（通常是池满/关闭），调用方可做兜底处理。
+func (a *Actor) AsyncRunResult(f func() interface{}, callBackFunc func(interface{}), validators ...func() bool) bool {
 	task := getAsyncTask()
 	task.actor = a
 	task.fSimple = f
@@ -243,7 +302,9 @@ func (a *Actor) AsyncRun(f func() interface{}, callBackFunc func(interface{}), v
 			zap.Int("poolRunning", a.workerPool.Running()),
 			zap.Int("poolFree", a.workerPool.Free()))
 		putAsyncTask(task)
+		return false
 	}
+	return true
 }
 
 // Core trick: safely write back data via self-message.

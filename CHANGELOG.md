@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2026-04-30
+
+### Changed
+
+- **zactor**：新增 `StartAsyncThen`（零 Promise 快路径，worker 执行 + Actor 主线程回写）。
+- **zactor**：`AsyncRun` / `AsyncRunWithMsg` 新增 `AsyncRunResult` / `AsyncRunWithMsgResult` 返回值语义，调用方可显式处理提交失败场景。
+- **zactor**：新增 `CallActorAll` 并发聚合调用能力；提交失败时立即回填 `RpcErr`，避免阻塞等待；
+- **zgate**：新增 `SetGateMonitorLogEnabled`，支持实例级开关 `[Gate Monitor]` 周期日志（默认开启，兼容历史行为）。
+- **zstartup**：`NewApp` 启动早期启用 `Grace.EnableSignalNotify`，缩小启动窗口期信号竞态。
+- **依赖**：`github.com/aiyang-zh/zhenyi-base` 升级到 `v1.1.2`（`go.mod`/`go.sum` 同步）。
+
+### Documentation
+
+- **压测报告**：新增 `docs/BENCHMARK.md` 与 `docs/BENCHMARK_EN.md`，统一公开 7 天稳态与 1 小时高压压测结论
+- **压测归档**：压测原始日志与截图改为归档在 `zhenyi-site/docs/bench/`（按场景目录 + `logs.zip`），主仓库文档改为引用归档路径。
+- **README 导航**：`README.md` / `README_EN.md` 增加压测报告入口（`docs/BENCHMARK.md` / `docs/BENCHMARK_EN.md`）。
+
+### Added
+
+- **zactor**：新增 `zactor/flow.go` 与 `zactor/flow_test.go`，覆盖 `StartAsyncThen` 行为与回调线程语义。
+
+### Tests
+
+- **zactor**：新增提交失败/验证失败路径测试（`CallActorAll`、`AsyncRunWithMsgResult`），补齐 refcount 与不阻塞保证。
+- **zgate**：新增 `SetGateMonitorLogEnabled` 覆盖测试，验证开关与 nil receiver 安全行为。
+
 ## 2026-04-10
 
 ### Changed

@@ -1,6 +1,7 @@
 package zactor
 
 import (
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -188,6 +189,43 @@ func (a *Actor) CallActor(actorId uint64, request ziface.IMessage, reply ziface.
 	}
 	res.Data = reply
 	return res
+}
+
+// CallActorAll concurrently issues multi-way CallActor and blocks until all return (or each times out).
+// It uses the same workerPool (ants) as AsyncRun, bounded by Actor.WorkSize, to avoid unbounded goroutines.
+//
+// Note: DO NOT call this in the current Actor mailbox thread and block-wait, otherwise callbacks may need
+// mailbox delivery and can deadlock. Use non-mailbox goroutines (e.g., inside AsyncRun) instead.
+//
+// CallActorAll 并发 CallActor；适用于同一调用方需同时等待多路 Worker 回包的场景（如 DAG 同层）。
+// 实现走与 AsyncRun 相同的 workerPool（ants），受 Actor.WorkSize 限制、共享 panic 回收，避免无界 go。
+//
+// 注意：不要在本 Actor 的邮箱处理线程上调用并阻塞等待（例如在某条入站消息的 Handler 里直接 CallActorAll + 等齐），
+// 否则子任务完成后的 AsyncRun 回调需经邮箱投递，可能造成自锁。应在 AsyncRun 工作协程或其它非邮箱线程上调用。
+func (a *Actor) CallActorAll(specs []ziface.RpcCallSpec, timeout time.Duration) []ziface.RpcReply {
+	if len(specs) == 0 {
+		return nil
+	}
+	out := make([]ziface.RpcReply, len(specs))
+	var wg sync.WaitGroup
+	for i := range specs {
+		wg.Add(1)
+		idx := i
+		ok := a.AsyncRunResult(
+			func() interface{} {
+				out[idx] = a.CallActor(specs[idx].ActorID, specs[idx].Request, specs[idx].Reply, timeout)
+				return nil
+			},
+			func(interface{}) { wg.Done() },
+		)
+		if !ok {
+			// Submission failed (worker pool closed/full), complete this slot immediately.
+			out[idx] = ziface.RpcReply{Code: ziface.ErrorCode_RpcErr, Msg: "async task submit failed"}
+			wg.Done()
+		}
+	}
+	wg.Wait()
+	return out
 }
 
 // SendToClientByUserId sends one response-style message to a client via gate actor ID.

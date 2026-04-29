@@ -21,6 +21,7 @@
 ## 简介
 
 zhenyi 在 **zhenyi-base** 之上提供 Actor 运行时、统一网关（TCP/WS/KCP）、跨进程总线/发现、指标与追踪等能力，面向长连接与实时业务后台。模块清单与架构说明见 **[文档索引](docs/DOCS_INDEX.md)**（勿在本页重复维护大表）。
+在 `2 vCPU / 4 GiB` 同机压测条件下，已验证两档实测结果：**7 天稳态约 4 万 QPS（P99 约 1~2ms）**，以及**1 小时高压约 16.7 万 QPS**；详见 **[压测报告](docs/BENCHMARK.md)**。
 
 ## 项目亮点
 
@@ -50,6 +51,7 @@ go run ./examples/im_single_demo
 | 新手教程 | [BEGINNER_GUIDE.md](docs/BEGINNER_GUIDE.md) |
 | 架构 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | 模块与 API | [MODULE_API.md](docs/MODULE_API.md) |
+| 压测报告 | [BENCHMARK.md](docs/BENCHMARK.md) |
 | 信创适配 | [XINCHUANG.md](docs/XINCHUANG.md) |
 | 图书（与实现对齐） | [go-actor-realtime](docs/books/go-actor-realtime/README.md) |
 

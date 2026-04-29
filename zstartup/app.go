@@ -60,6 +60,9 @@ func NewApp(ctx context.Context, cfg AppConfig) *App {
 		actorFactories: make(map[uint32]ActorFactory),
 	}
 	app.Grace.SetContext(runCtx)
+	// Enable signal forwarding early to avoid startup window races.
+	// 进程启动早期即开始接收退出信号，避免在 Group.Run 前收到 SIGTERM 时被直接终止。
+	app.Grace.EnableSignalNotify()
 	return app
 }
 

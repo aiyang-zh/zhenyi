@@ -35,6 +35,8 @@ go.work.sum
 # Logs
 logs/
 *.log
+docs/bench/*.log.*
+docs/bench/*.zip
 
 # OS / editor noise (keep repo clean for public clones)
 .DS_Store
